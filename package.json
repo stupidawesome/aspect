@@ -28,6 +28,7 @@
     },
     "private": true,
     "dependencies": {
+        "@abraham/reflection": "^0.7.0",
         "@angular/animations": "^10.1.0",
         "@angular/common": "^10.1.0",
         "@angular/compiler": "^10.1.0",

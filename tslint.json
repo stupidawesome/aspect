@@ -8,14 +8,14 @@
     },
     "rules": {
         "arrow-return-shorthand": true,
-        "callable-types": true,
+        "callable-types": false,
         "class-name": true,
         "deprecation": {
             "severity": "warn"
         },
         "forin": true,
         "import-blacklist": [true, "rxjs/Rx"],
-        "interface-over-type-literal": true,
+        "interface-over-type-literal": false,
         "member-access": false,
         "member-ordering": [
             true,
@@ -51,7 +51,7 @@
         "prefer-const": true,
         "radix": true,
         "triple-equals": [true, "allow-null-check"],
-        "unified-signatures": true,
+        "unified-signatures": false,
         "variable-name": false,
         "nx-enforce-module-boundaries": [
             true,

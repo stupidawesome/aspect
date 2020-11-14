@@ -120,6 +120,35 @@
                     }
                 }
             }
+        },
+        "store": {
+            "projectType": "library",
+            "root": "packages/store",
+            "sourceRoot": "packages/store/src",
+            "prefix": "aspect",
+            "architect": {
+                "lint": {
+                    "builder": "@angular-devkit/build-angular:tslint",
+                    "options": {
+                        "tsConfig": [
+                            "packages/store/tsconfig.lib.json",
+                            "packages/store/tsconfig.spec.json"
+                        ],
+                        "exclude": [
+                            "**/node_modules/**",
+                            "!packages/store/**/*"
+                        ]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "packages/store/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            },
+            "schematics": {}
         }
     },
     "cli": {

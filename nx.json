@@ -28,6 +28,9 @@
         },
         "example": {
             "tags": []
+        },
+        "store": {
+            "tags": []
         }
     },
     "workspaceLayout": {
