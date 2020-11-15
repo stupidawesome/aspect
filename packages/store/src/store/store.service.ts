@@ -1,14 +1,11 @@
-import { HttpClient } from "@angular/common/http"
-import { Optional, Self } from "@angular/core"
 import {
-    Component,
     Inject,
     Injectable,
     InjectionToken,
     Injector,
-    Input,
-    NgModule,
     OnDestroy,
+    Optional,
+    Self,
     Type,
 } from "@angular/core"
 import { Ref } from "@aspect/core"
@@ -22,15 +19,7 @@ import {
     Subscription,
     throwError,
 } from "rxjs"
-import {
-    catchError,
-    delay,
-    filter,
-    map,
-    scan,
-    switchMap,
-    tap,
-} from "rxjs/operators"
+import { catchError, delay, filter, scan } from "rxjs/operators"
 
 const REDUCERS = new InjectionToken("REDUCERS")
 const EFFECTS = new InjectionToken("EFFECTS")
@@ -111,16 +100,15 @@ export class EffectsService implements StoreInitializer, OnDestroy {
             const deps = injector.get(effectFactory.deps)
             const { options } = effectFactory
             for (const effect of effectFactory.effects) {
-                const source: Observable<Action> = effect(deps, state)
-                    .pipe(
-                        catchError((error) => {
-                            if (options.restartOnError) {
-                                console.error(error)
-                                return source
-                            }
-                            return throwError(error)
-                        }),
-                    )
+                const source: Observable<Action> = effect(deps, state).pipe(
+                    catchError((error) => {
+                        if (options.restartOnError) {
+                            console.error(error)
+                            return source
+                        }
+                        return throwError(error)
+                    }),
+                )
                 this.sink.add(source.subscribe(dispatcher))
             }
         }
@@ -305,50 +293,9 @@ export function createStore(
     ]
 }
 
-const MyAction = createAction("MyAction").withData<{ by: number }>()
-
-const MyOtherAction = createAction("MyOtherAction").create()
-
-type AppState = State<typeof AppState>
-const AppState = createState(() => {
-    return new Ref({
-        count: new Ref(0),
-        nested: new Ref("hello"),
-    })
-})
-
 export interface Action {
     readonly type: string
 }
-
-const root = createReducer(AppState).add(
-    (state, { data }) =>
-        state((value) => value.count((count) => count + data.by)),
-    [MyAction],
-)
-
-const nested = root
-    .select((state) => state().nested)
-    .add((state, act) => state(act.toString()), [MyAction, MyOtherAction])
-
-@Injectable()
-class EffectContext {
-    constructor(
-        readonly state: AppState,
-        readonly http: HttpClient,
-        readonly actions: Actions,
-    ) {}
-}
-
-const appEffects = createEffect(EffectContext).add(
-    ({ actions, http }, state) => {
-        return actions.pipe(
-            ofType(MyAction),
-            switchMap((act) => http.post("", act.data)),
-            map(MyOtherAction),
-        )
-    },
-)
 
 export function withReducers(...reducers: Reducer<any, any>[]) {
     return [
@@ -379,26 +326,3 @@ export function withEffects(...effects: EffectFactory<any>[]) {
         },
     ]
 }
-
-const AppStore = createStore(AppState, [
-    withReducers(root, nested),
-    withEffects(appEffects),
-])
-
-@Component({
-    template: ``,
-    providers: [AppStore],
-})
-export class MyComp {
-    @Input()
-    count
-
-    constructor(readonly state: AppState) {
-        this.count = new Ref<number>(state().count)
-    }
-}
-
-@NgModule({
-    declarations: [MyComp],
-})
-export class MyMod {}
