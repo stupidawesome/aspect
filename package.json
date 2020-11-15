@@ -38,7 +38,8 @@
         "@angular/platform-browser-dynamic": "^10.1.0",
         "@angular/router": "^10.1.0",
         "rxjs": "~6.5.5",
-        "zone.js": "^0.10.2"
+        "zone.js": "^0.10.2",
+        "object-path": "0.11.5"
     },
     "devDependencies": {
         "@angular-devkit/build-angular": "~0.1001.3",
@@ -51,6 +52,7 @@
         "@nrwl/workspace": "10.3.1",
         "@types/jest": "26.0.8",
         "@types/node": "~8.9.4",
+        "@types/object-path": "^0.11.0",
         "codelyzer": "~5.0.1",
         "dotenv": "6.2.0",
         "eslint": "7.10.0",

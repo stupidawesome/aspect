@@ -1,5 +1,6 @@
 import { Observable, Observer, PartialObserver, Subject, Subscription } from 'rxjs';
 import { AnonymousSubject } from 'rxjs/internal-compatibility';
+import { Ref } from './ref';
 
 function addSubscription(sub: Subscription) {
     return sub
@@ -10,7 +11,7 @@ export class Stream<T, U = T> {
 
     private sink
 
-    static from<T>(source: Observable<T>) {
+    static from<T>(source: Observable<T> | Ref<T>) {
         return new Stream(source)
     }
 
@@ -32,8 +33,8 @@ export class Stream<T, U = T> {
         return addSubscription(this.source.subscribe(this.sink))
     }
 
-    constructor(private source: Observable<T>, sink?: Observer<T | U>) {
+    constructor(private source: Observable<T> | Ref<T>, sink?: Observer<T | U>) {
         this.closed = false
-        this.sink = new AnonymousSubject<T | U>(sink, source)
+        this.sink = new AnonymousSubject<T | U>(sink, source as Observable<T>)
     }
 }

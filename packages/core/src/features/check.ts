@@ -13,7 +13,7 @@ function getCurrentValues(instance: any, props: string[]) {
     return props.map(prop => objectPath.get(instance, prop))
 }
 
-function checkValues(instance: any, props: string[], method: Function, previousValuesMap: Map) {
+function checkValues(instance: any, props: string[], method: Function, previousValuesMap: Map<any, any>) {
     let changed = false
     const len = props.length
     const previousValues = previousValuesMap.get(method)
@@ -35,7 +35,7 @@ function checkValues(instance: any, props: string[], method: Function, previousV
 function createDoCheckFeature(props: string[], descriptor: PropertyDescriptor) {
     function watchFeature(componentDef: ComponentDef<any>): void {
         const { factory } = componentDef
-        const previousValuesMap = new WeakMap()
+        const previousValuesMap = new Map()
         componentDef.doCheck = wrap(componentDef.doCheck, function (this: any) {
             checkValues(this, props, descriptor.value, previousValuesMap)
         })
