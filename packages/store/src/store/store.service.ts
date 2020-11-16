@@ -65,7 +65,10 @@ export class StoreService implements StoreInitializer, OnDestroy {
                                     allowedAction.type === _action.type,
                             ),
                         ),
-                        scan(reducer, reducerFactory.selector(state)),
+                        scan((nextState, action) => {
+                            reducer(nextState, action)
+                            return nextState
+                        }, reducerFactory.selector(state)),
                     )
                     .subscribe()
                 this.sink.add(sub)

@@ -1,9 +1,10 @@
-import { ɵNG_COMP_DEF, ɵNG_DIR_DEF } from '@angular/core';
-import { Observable, OperatorFunction, Subject } from 'rxjs';
-import { pipeFromArray } from 'rxjs/internal/util/pipe';
-import { map, mergeAll } from 'rxjs/operators';
-import { ComponentDef } from './interfaces';
-import { Reflection } from './reflection';
+import { ɵNG_COMP_DEF, ɵNG_DIR_DEF } from "@angular/core"
+import { Observable, OperatorFunction, Subject } from "rxjs"
+import { pipeFromArray } from "rxjs/internal/util/pipe"
+import { map, mergeAll } from "rxjs/operators"
+import { ComponentDef } from "./interfaces"
+import { Reflection } from "./reflection"
+import { createDoCheckFeature } from "./features/check"
 
 interface Context {
     [key: string]: any
@@ -17,29 +18,6 @@ const refs = new Map()
 const previousValues = new Map()
 const sinks = new Map()
 const processes = new Map()
-
-function doCheck(context: Context) {
-    Object.getOwnPropertyNames(context).forEach(propertyKey => {
-        const keys: string[] = Reflection.getOwnMetadata(Decorators.Watch, context, propertyKey) ?? []
-        for (const key of keys) {
-            const ref = refs.get(key)
-            const previousValue = previousValues.get(key)
-            const currentValue = context[key]
-            const method = context[propertyKey]
-            const process = processes.get(method)
-            if (ref !== currentValue) {
-                ref(currentValue())
-            }
-            if (previousValue !== ref.value) {
-                previousValues.set(key, ref.value)
-                const returnValue = method()
-                if ("subscribe" in returnValue) {
-                    process.next(returnValue)
-                }
-            }
-        }
-    })
-}
 
 function maybeFlatmap() {
     return function (source: Observable<any>) {
@@ -72,28 +50,22 @@ function destroy(context: Context) {
     }
 }
 
-function UseFeatures() {
+export function UseFeatures() {
     return function(target: any) {
+        const { prototype } = target
         const features = []
-        const componentDef: ComponentDef<any> = target[ɵNG_COMP_DEF] ?? target[ɵNG_DIR_DEF];
 
-        if (componentDef === undefined) {
-            throw new Error('Ivy is not enabled.');
-        }
-
-        for (const propertyKey of Reflection.getOwnMetadataProperties(target)) {
-            const metakeys = Reflection.getOwnMetadataKeys(target, propertyKey)
+        for (const propertyKey of Reflection.getOwnMetadataProperties(prototype)) {
+            const metakeys = Reflection.getOwnMetadataKeys(prototype, propertyKey)
             for (const metadataKey of metakeys) {
-                const factory = Reflection.getOwnMetadata(metadataKey, target, propertyKey)
+                const factory = Reflection.getOwnMetadata(metadataKey, prototype, propertyKey)
                 if (factory) {
                     features.push(factory)
                 }
             }
         }
 
-        componentDef.features?.push(...features);
-
-        features.forEach(feature => feature(componentDef));
+        features.forEach(feature => feature(target));
     }
 }
 
@@ -120,7 +92,11 @@ export function createDecorator(key: string): Decorator<unknown[]> {
     }
 }
 
-export const DoCheck = createDecorator<string[]>(Decorators.DoCheck)
+export function DoCheck(...paths: string[]): MethodDecorator {
+    return function (target, propertyKey, descriptor) {
+        Reflection.defineMetadata(Decorators.DoCheck, createDoCheckFeature(paths, descriptor), target, propertyKey)
+    }
+}
 
 export const UsePipe = createDecorator<OperatorFunction<any, unknown>[]>(Decorators.UsePipe)
 

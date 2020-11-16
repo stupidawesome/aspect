@@ -1,7 +1,7 @@
 const metadata = new WeakMap<{}, Map<any, Map<any, any>>>()
 
 function safeGetMap(map: WeakMap<any, any>, key: any) {
-    return map.get(key) ?? metadata.set(key, new Map()).get(key)
+    return map.get(key) ?? map.set(key, new Map()).get(key)
 }
 
 export class Reflection {
@@ -18,7 +18,7 @@ export class Reflection {
         return metadata.get(target)?.get(propertyKey)?.keys() ?? []
     }
 
-    static getOwnMetadataProperties(target: {}) {
+    static getOwnMetadataProperties(target: any) {
         return metadata.get(target)?.keys() ?? []
     }
 
