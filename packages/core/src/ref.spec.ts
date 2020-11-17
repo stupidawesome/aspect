@@ -1,4 +1,4 @@
-import { Ref, unref } from './ref';
+import { Ref, unref } from "./ref"
 import fn = jest.fn
 
 describe("Ref", () => {
@@ -78,7 +78,7 @@ describe("Ref", () => {
 
         given: expected = new Ref(10)
         given: subject = new Ref({
-            nested: new Ref(0)
+            nested: new Ref(0),
         })
         when: subject({ nested: expected })
         when: result = subject().nested()
@@ -106,7 +106,7 @@ describe("Ref", () => {
         given: expected = { nested: 10 }
         given: expected2 = new Ref({ nested: new Ref(20) })
         given: subject = new Ref({
-            nested: new Ref(0)
+            nested: new Ref(0),
         })
 
         when: subject.subscribe(result)
@@ -125,7 +125,7 @@ describe("Ref", () => {
 
         given: expected = 10
         given: subject = new Ref({
-            nested: 0
+            nested: 0,
         })
 
         when: subject((value) => {
@@ -158,7 +158,11 @@ describe("Ref", () => {
     })
 
     it("should compute values", () => {
-        let subject: Ref<number>, subject2: Ref<number>, subject3, expected, result
+        let subject: Ref<number>,
+            subject2: Ref<number>,
+            subject3,
+            expected,
+            result
 
         given: expected = 10 + 10 * 5 - 10
         given: subject = new Ref(1)
@@ -179,7 +183,7 @@ describe("Ref", () => {
         given: subject = new Ref(values)
 
         when: subject(expected.concat(4))
-        when: subject((value) => value.push(5))
+        when: subject((value) => void value.push(5))
 
         then: result = subject()
         then: expect(result).toBe(values)
@@ -189,11 +193,15 @@ describe("Ref", () => {
     it("should work with maps", () => {
         let subject, expected: [string, number], result, values
 
-        given: values = [["a", 1], ["b", 2], ["c", 3]] as [string, number][]
+        given: values = [
+            ["a", 1],
+            ["b", 2],
+            ["c", 3],
+        ] as [string, number][]
         given: expected = ["d", 4]
         given: subject = new Ref(new Map(values))
 
-        when: subject(map => map.set(expected[0], expected[1]))
+        when: subject((map) => map.set(expected[0], expected[1]))
 
         then: result = subject()
         then: expect(result).toEqual(new Map(values.concat([expected])))
@@ -206,7 +214,7 @@ describe("Ref", () => {
         given: expected = [5, 6]
         given: subject = new Ref(new Set(values))
 
-        when: subject(map => map.add(expected[0]).add(expected[1]))
+        when: subject((map) => map.add(expected[0]).add(expected[1]))
 
         then: result = subject()
         then: expect(result).toEqual(new Set(values.concat(expected)))

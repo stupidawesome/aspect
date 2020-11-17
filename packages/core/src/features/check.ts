@@ -2,6 +2,8 @@ import * as objectPath from "object-path"
 import { Type } from "@angular/core"
 import { isObservable, Observable, ObservableInput, Subject, Subscribable } from "rxjs"
 import { filter, switchAll } from "rxjs/operators"
+import { AspectOptions } from '../interfaces';
+import { maybeSwitch } from '../utils';
 
 function noop() {}
 function wrap(origFn: Function = noop, newFn: Function) {
@@ -18,7 +20,7 @@ function getCurrentValues(instance: any, props: string[]) {
     return props.map(prop => objectPathWithInheritedProps.get(instance, prop))
 }
 
-function checkValues(instance: any, props: string[], method: Function, previousValuesMap: Map<any, any>, processMap: WeakMap<any, Subject<any>>) {
+function checkValues(instance: any, props: string[], method: Function, previousValuesMap: WeakMap<any, any>, processMap: WeakMap<any, any>) {
     let changed = false
     const len = props.length
     const previousValues = previousValuesMap.get(method) ?? []
@@ -32,14 +34,14 @@ function checkValues(instance: any, props: string[], method: Function, previousV
         }
     }
     if (changed) {
-        previousValuesMap.set(method, currentValues)
+        previousValuesMap.set(instance, currentValues)
         processMap.get(instance)?.next(method.apply(instance, previousValues))
     }
 }
 
-export function createDoCheckFeature(props: string[], descriptor: PropertyDescriptor) {
+export function createDoCheckFeature(props: string[], descriptor: PropertyDescriptor, options: AspectOptions) {
     return function watchFeature(componentDef: Type<any>): void {
-        const previousValuesMap = new Map()
+        const previousValuesMap = new WeakMap()
         const processMap = new WeakMap()
         const subscribeMap = new WeakMap()
 

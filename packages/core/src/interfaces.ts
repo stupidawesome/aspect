@@ -1,4 +1,5 @@
 import { ɵComponentDef } from '@angular/core';
+import { OperatorFunction } from 'rxjs';
 
 export type ComponentDef<T> = ɵComponentDef<T> & {
     onInit: Function
@@ -8,6 +9,10 @@ export type ComponentDef<T> = ɵComponentDef<T> & {
     afterViewInit: Function
     afterViewChecked: Function
     onDestroy: Function
+}
+
+export interface AspectOptions {
+    on?: OperatorFunction<any, any>
 }
 
 export interface ComponentDefFeature {

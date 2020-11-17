@@ -66,7 +66,7 @@ export class StoreService implements StoreInitializer, OnDestroy {
                             ),
                         ),
                         scan((nextState, action) => {
-                            reducer(nextState, action)
+                            nextState(reducer(nextState(), action.data))
                             return nextState
                         }, reducerFactory.selector(state)),
                     )
@@ -160,7 +160,7 @@ class Reducer<T, U extends Ref<any>> {
     provider
 
     add<V extends [...((...args: any[]) => any)[]]>(
-        fn: (state: U, action: ActionType<V[number]>) => any,
+        fn: (state: ReturnType<U>, action: ActionType<V[number]>["data"]) => ReturnType<U> | void,
         actions: V,
     ) {
         this.reducers.push([fn as any, actions])
@@ -298,6 +298,7 @@ export function createStore(
 
 export interface Action {
     readonly type: string
+    readonly data: unknown
 }
 
 export function withReducers(...reducers: Reducer<any, any>[]) {

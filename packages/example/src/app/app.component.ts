@@ -27,8 +27,8 @@ const Multiply = createAction("Multiply").withData<number>()
 const reducer = createReducer(AppState)
 const setCount = reducer
     .select(state => state.count)
-    .add((count, action) => count(count.value + action.data), [Increment])
-    .add((count, action) => count(count.value * action.data), [Multiply])
+    .add((count, increment) => count + increment, [Increment])
+    .add((count, multiplier) => count * multiplier, [Multiply])
 
 const appEffects = createEffect(Actions)
     .add((actions) => {
@@ -55,31 +55,33 @@ const AppStore = createStore(AppState, [
     providers: [
         AppStore,
     ],
-    changeDetection: ChangeDetectionStrategy.OnPush
+    // changeDetection: ChangeDetectionStrategy.OnPush
 })
 @UseFeatures()
 export class AppComponent {
-    title = "example"
     count
-    state
+    nested
 
     increment() {
         this.dispatcher.dispatch(Increment(1))
     }
 
-    @DoCheck("state.nested().count")
+    @DoCheck("nested().count", { on: delay(1000) })
     logCount(previous: number) {
-        return from([1, 2, 3]).pipe(map(value => of(value).pipe(delay(1000))), concatAll(), tap((value) => {
-            console.log("stream value", value)
-        }))
+        console.log('hi?', previous, this.nested().count)
+        return of(1, 2, 3).pipe(
+            tap(a => console.log('test', a))
+        )
     }
 
     constructor(state: AppState, private dispatcher: Dispatcher) {
         this.count = state.count
-        this.state = state
+        this.nested = state.nested
 
         state.count.subscribe((value) => {
-            state.nested(nested => nested.count = value)
+            state.nested(nested => {
+                nested.count = value
+            })
         })
     }
 }

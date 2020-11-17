@@ -81,8 +81,8 @@ export class Ref<T> extends Callable<GetterSetter<any>> {
         }
         else if (typeof value === "function") {
             const draft = unref(this);
-            (<any>value)(draft)
-            this.setValue(draft)
+
+            this.setValue((<any>value)(draft) ?? draft)
         } else {
             this.setValue(unref(value))
         }
