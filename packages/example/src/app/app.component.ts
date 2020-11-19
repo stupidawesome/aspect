@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component } from "@angular/core"
-import { DoCheck, Observe, Ref, UseFeatures } from '@aspect/core';
+import { Component } from "@angular/core"
+import { DoCheck, Observe, Ref, UseFeatures } from "@aspect/core"
 import {
     Actions,
     createAction,
@@ -11,13 +11,13 @@ import {
     withEffects,
     withReducers,
 } from "@aspect/store"
-import { concatAll, debounceTime, delay, map, mapTo, mergeAll, mergeMap, tap } from 'rxjs/operators';
-import { from, of, pipe } from 'rxjs';
+import { of, pipe } from "rxjs"
+import { delay, mapTo } from "rxjs/operators"
 
 class AppState {
     count = new Ref(0)
     nested = new Ref({
-        count: 0
+        count: 0,
     })
 }
 
@@ -66,9 +66,10 @@ export class AppComponent {
         this.dispatcher.dispatch(Increment(1))
     }
 
-    @DoCheck("nested().count", { on: pipe(delay(1000)) })
+    @DoCheck("count()", { on: pipe(delay(1000)) })
     logCount(previous: number) {
-        return of(1, 2, 3)
+        const { count } = this
+        // return of(count() * 2).pipe(delay(1000), tap(count))
     }
 
     @Observe(["count"], { on: delay(1000) })

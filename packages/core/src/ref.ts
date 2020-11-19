@@ -64,8 +64,8 @@ type AllowedTypes<T extends Primitive | Object | Array<any> | Set<any> | Map<any
 
 export interface Ref<T> {
     (): T
-    (value: T | Ref<T> | UnwrapRefs<T>): T
     (setter: (value: T) => any): T
+    (value: T | Ref<T> | UnwrapRefs<T>): T
 }
 export class Ref<T> extends Callable<GetterSetter<any>> {
     get value(): UnwrapRefs<T> {
@@ -75,7 +75,19 @@ export class Ref<T> extends Callable<GetterSetter<any>> {
     private readonly subject: BehaviorSubject<UnwrapRefs<T>>
 
     next(
-        value: T | UnwrapRefs<T> | Ref<T> | ((value: UnwrapRefs<T>) => any),
+        value: ((value: UnwrapRefs<T>) => any),
+    ): void
+    next(
+        value: Ref<T>
+    ): void
+    next(
+        value: UnwrapRefs<T>
+    ): void
+    next(
+        value: T
+    ): void
+    next(
+        value: any,
     ): void {
         if (value instanceof Ref) {
             this.setValue(value.value)
