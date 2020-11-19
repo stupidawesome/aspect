@@ -1,6 +1,6 @@
 import { OperatorFunction } from "rxjs"
 import { isArray } from "rxjs/internal-compatibility"
-import { createDoCheckFeature } from "./features/check"
+import { createDoCheckFeature, createObserveFeature } from './features/check';
 import { AspectOptions } from "./interfaces"
 import { Reflection } from "./reflection"
 
@@ -58,6 +58,12 @@ export function createDecorator(key: string): Decorator<unknown[]> {
 export function DoCheck(paths: string | string[], aspectOptions: AspectOptions = {}): MethodDecorator {
     return function (target, propertyKey, descriptor) {
         Reflection.defineMetadata(Decorators.DoCheck, createDoCheckFeature(isArray(paths) ? paths : [paths], descriptor, aspectOptions), target, propertyKey)
+    }
+}
+
+export function Observe(paths: string | string[], aspectOptions: AspectOptions = {}): MethodDecorator {
+    return function (target, propertyKey, descriptor) {
+        Reflection.defineMetadata(Decorators.DoCheck, createObserveFeature(isArray(paths) ? paths : [paths], descriptor, aspectOptions), target, propertyKey)
     }
 }
 
