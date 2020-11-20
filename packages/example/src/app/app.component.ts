@@ -44,10 +44,6 @@ const AppStore = createStore(AppState, [
     withEffects(appEffects),
 ])
 
-export abstract class ButtonLike {
-    abstract color: string
-}
-
 @Component({
     selector: "aspect-root",
     template: `
