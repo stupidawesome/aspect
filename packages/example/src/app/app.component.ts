@@ -1,5 +1,5 @@
-import { Component } from "@angular/core"
-import { DoCheck, Observe, Ref, UseFeatures } from "@aspect/core"
+import { Component, Directive, Injectable } from '@angular/core';
+import { DoCheck, ErrorListener, Observe, OnInit, OnViewInit, Ref, UseFeatures } from '@aspect/core';
 import {
     Actions,
     createAction,
@@ -11,7 +11,7 @@ import {
     withEffects,
     withReducers,
 } from "@aspect/store"
-import { of, pipe } from "rxjs"
+import { of, pipe, throwError } from 'rxjs';
 import { delay, mapTo } from "rxjs/operators"
 
 class AppState {
@@ -44,6 +44,10 @@ const AppStore = createStore(AppState, [
     withEffects(appEffects),
 ])
 
+export abstract class ButtonLike {
+    abstract color: string
+}
+
 @Component({
     selector: "aspect-root",
     template: `
@@ -74,7 +78,17 @@ export class AppComponent {
 
     @Observe(["count"], { on: delay(1000) })
     observeNested(value: any) {
-        return of(1, 2, 3)
+        return throwError(new Error("hi"))
+    }
+
+    @ErrorListener()
+    onError(err: unknown) {
+        console.log('error!', err)
+    }
+
+    @OnViewInit()
+    onInit() {
+        console.log('hi init!')
     }
 
     constructor(state: AppState, private dispatcher: Dispatcher) {

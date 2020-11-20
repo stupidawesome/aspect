@@ -1,4 +1,4 @@
-import { BehaviorSubject, Observable, OperatorFunction, PartialObserver, Subscription } from 'rxjs';
+import { BehaviorSubject, Observable, OperatorFunction, PartialObserver, Subject, Subscription } from 'rxjs';
 import { Callable } from './callable';
 import { pipeFromArray } from './utils';
 
@@ -68,11 +68,9 @@ export interface Ref<T> {
     (value: T | Ref<T> | UnwrapRefs<T>): T
 }
 export class Ref<T> extends Callable<GetterSetter<any>> {
-    get value(): UnwrapRefs<T> {
-        return this.subject.value
-    }
+    value: UnwrapRefs<T>
     private ref!: T | Ref<T> | (() => T)
-    private readonly subject: BehaviorSubject<UnwrapRefs<T>>
+    private readonly subject: Subject<UnwrapRefs<T>>
 
     next(
         value: ((value: UnwrapRefs<T>) => any),
@@ -118,6 +116,7 @@ export class Ref<T> extends Callable<GetterSetter<any>> {
     }
 
     private setValue(unwrappedValue: UnwrapRefs<T>) {
+        this.value = unwrappedValue
         if (this.ref instanceof Ref) {
             this.subject.next(unwrappedValue)
             return
@@ -181,6 +180,7 @@ export class Ref<T> extends Callable<GetterSetter<any>> {
             return this.ref instanceof Function ? this.ref() : this.ref
         })
         this.ref = valueRef
-        this.subject = new BehaviorSubject<UnwrapRefs<T>>(unref(this))
+        this.value = unref(this)
+        this.subject = new Subject<UnwrapRefs<T>>()
     }
 }

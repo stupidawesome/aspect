@@ -1,15 +1,15 @@
 import { Type } from "@angular/core"
 import * as objectPath from "object-path"
 import { identity, ObservableInput, Subject, Subscribable } from 'rxjs';
-import { distinctUntilChanged, filter, switchAll } from "rxjs/operators"
+import { catchError, distinctUntilChanged, filter, switchAll } from 'rxjs/operators';
 import { AspectOptions } from "../interfaces"
 import { maybeSwitch } from "../utils"
 
 function noop() {}
-function wrap(origFn: Function = noop, newFn: Function) {
-    return function(this: any) {
-        newFn.apply(this)
-        origFn?.apply(this)
+export function wrap(origFn: Function = noop, newFn: Function) {
+    return function(this: any, ...args: any[]) {
+        newFn.apply(this, args)
+        origFn?.apply(this, args)
     }
 }
 
@@ -39,8 +39,8 @@ function checkValues(instance: any, props: string[], method: Function, previousV
     }
 }
 
-export function createDoCheckFeature(props: string[], descriptor: PropertyDescriptor, options: AspectOptions) {
-    return function watchFeature(componentDef: Type<any>): void {
+export function createCheckFeature(props: string[], descriptor: PropertyDescriptor, options: AspectOptions, lifecycleKey: string) {
+    return function watchFeature(componentDef: Type<any>, errorMap: WeakMap<any, any>): void {
         const previousValuesMap = new WeakMap()
         const processMap = new WeakMap()
         const subscribeMap = new WeakMap()
@@ -52,7 +52,11 @@ export function createDoCheckFeature(props: string[], descriptor: PropertyDescri
             const stream = process.pipe(
                 filter((value): value is Subscribable<any> => "subscribe" in Object(value)),
                 options.on ?? identity,
-                maybeSwitch()
+                maybeSwitch(),
+                catchError((e, caught) => {
+                    errorMap.get(this).next(e)
+                    return caught
+                })
             )
             processMap.set(this, process)
             subscribeMap.set(this, stream.subscribe())
@@ -63,15 +67,14 @@ export function createDoCheckFeature(props: string[], descriptor: PropertyDescri
             subscribeMap.get(this)?.unsubscribe()
         })
 
-        componentDef.prototype.ngDoCheck = wrap(componentDef.prototype.ngDoCheck, function (this: any) {
+        componentDef.prototype[lifecycleKey] = wrap(componentDef.prototype[lifecycleKey], function (this: any) {
             checkValues(this, props, descriptor.value, previousValuesMap, processMap)
         })
     }
 }
 
 export function createObserveFeature(props: string[], descriptor: PropertyDescriptor, options: AspectOptions) {
-    return function watchFeature(componentDef: Type<any>): void {
-        const previousValuesMap = new WeakMap()
+    return function watchFeature(componentDef: Type<any>, errorMap: WeakMap<any, any>): void {
         const processMap = new WeakMap()
         const subscribeMap = new WeakMap()
 
@@ -81,7 +84,12 @@ export function createObserveFeature(props: string[], descriptor: PropertyDescri
             const process = new Subject<ObservableInput<any> | unknown>()
             const stream = process.pipe(
                 filter((value): value is Subscribable<any> => "subscribe" in Object(value)),
-                switchAll()
+                options.on ?? identity,
+                maybeSwitch(),
+                catchError((e, caught) => {
+                    errorMap.get(this).next(e)
+                    return caught
+                })
             )
             processMap.set(this, process)
             subscribeMap.set(this, stream.subscribe())
@@ -90,6 +98,60 @@ export function createObserveFeature(props: string[], descriptor: PropertyDescri
                     process.next(descriptor.value.call(this, value))
                 })
             }
+        })
+
+        componentDef.prototype.ngOnDestroy = wrap(componentDef.prototype.ngOnDestroy, function (this: any) {
+            processMap.get(this)?.complete()
+            subscribeMap.get(this)?.unsubscribe()
+        })
+    }
+}
+
+export function createErrorFeature(descriptor: PropertyDescriptor, options: AspectOptions) {
+    return function errorFeature(componentDef: Type<any>, errorMap: WeakMap<any, any>): void {
+        const processMap = new WeakMap()
+        const subscribeMap = new WeakMap()
+
+        componentDef.prototype.ngOnInit = wrap(componentDef.prototype.ngOnInit, function (this: any) {
+            const process = new Subject<ObservableInput<any> | unknown>()
+            const stream = process.pipe(
+                filter((value): value is Subscribable<any> => "subscribe" in Object(value)),
+                options.on ?? identity,
+                maybeSwitch()
+            )
+            processMap.set(this, process)
+            subscribeMap.set(this, stream.subscribe())
+            errorMap.get(this).subscribe((value: unknown) => {
+                process.next(descriptor.value.call(this, value))
+            })
+        })
+
+        componentDef.prototype.ngOnDestroy = wrap(componentDef.prototype.ngOnDestroy, function (this: any) {
+            processMap.get(this)?.complete()
+            subscribeMap.get(this)?.unsubscribe()
+        })
+    }
+}
+
+export function createInitFeature(descriptor: PropertyDescriptor, options: AspectOptions, lifecycleKey: string) {
+    return function initFeature(componentDef: Type<any>, errorMap: WeakMap<any, any>): void {
+        const processMap = new WeakMap()
+        const subscribeMap = new WeakMap()
+
+        componentDef.prototype[lifecycleKey] = wrap(componentDef.prototype.ngOnInit, function (this: any) {
+            const process = new Subject<ObservableInput<any> | unknown>()
+            const stream = process.pipe(
+                filter((value): value is Subscribable<any> => "subscribe" in Object(value)),
+                options.on ?? identity,
+                maybeSwitch(),
+                catchError((e, caught) => {
+                    errorMap.get(this).next(e)
+                    return caught
+                })
+            )
+            processMap.set(this, process)
+            subscribeMap.set(this, stream.subscribe())
+            process.next(descriptor.value.call(this))
         })
 
         componentDef.prototype.ngOnDestroy = wrap(componentDef.prototype.ngOnDestroy, function (this: any) {

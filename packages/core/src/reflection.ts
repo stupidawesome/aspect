@@ -5,7 +5,7 @@ function safeGetMap(map: WeakMap<any, any>, key: any) {
 }
 
 export class Reflection {
-    static defineMetadata(metadataKey: string | symbol, metadataValue: unknown, target: {}, propertyKey?: string | symbol) {
+    static defineMetadata(metadataKey: string | symbol | number, metadataValue: unknown, target: {}, propertyKey?: string | symbol) {
         const targetMetadata = safeGetMap(metadata, target)
         const propMetadata = safeGetMap(targetMetadata, propertyKey)
         propMetadata.set(metadataKey, metadataValue)

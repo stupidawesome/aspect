@@ -57,7 +57,7 @@ describe("Ref", () => {
         given: result = fn()
         given: subject = new Ref(expected)
         when: subject.subscribe(result)
-        then: expect(result).toHaveBeenCalledWith(expected)
+        then: expect(result).not.toBeCalled()
     })
 
     it("should trigger ref", () => {
@@ -68,9 +68,7 @@ describe("Ref", () => {
         given: subject = new Ref(values[0])
         when: subject.subscribe(result)
         when: subject(values[1])
-        for (const [nth, expected] of values.entries()) {
-            then: expect(result).toHaveBeenNthCalledWith(nth + 1, expected)
-        }
+        then: expect(result).toHaveBeenNthCalledWith(1, values[1])
     })
 
     it("should set nested refs", () => {
@@ -114,10 +112,10 @@ describe("Ref", () => {
         when: subject(expected)
         when: subject(expected2)
 
-        then: expect(result).toHaveBeenNthCalledWith(3, expected.nested)
-        then: expect(result).toHaveBeenNthCalledWith(4, expected)
-        then: expect(result).toHaveBeenNthCalledWith(5, expected2().nested())
-        then: expect(result).toHaveBeenNthCalledWith(6, unref(expected2))
+        then: expect(result).toHaveBeenNthCalledWith(1, expected.nested)
+        then: expect(result).toHaveBeenNthCalledWith(2, expected)
+        then: expect(result).toHaveBeenNthCalledWith(3, expected2().nested())
+        then: expect(result).toHaveBeenNthCalledWith(4, unref(expected2))
     })
 
     it("should accept setter functions", () => {
