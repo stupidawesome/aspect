@@ -17,7 +17,8 @@
         "baseUrl": ".",
         "paths": {
             "@aspect/core": ["packages/core/src/index.ts"],
-            "@aspect/store": ["packages/store/src/index.ts"]
+            "@aspect/store": ["packages/store/src/index.ts"],
+            "@aspect/fsm": ["packages/fsm/src/index.ts"]
         },
         "strict": true
     },

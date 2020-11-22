@@ -154,7 +154,7 @@ export function ofType<
     }
 }
 
-class Reducer<T, U extends Ref<any>> {
+export class Reducer<T, U extends Ref<any>> {
     reducers: [(state: T, actions: ActionType<any>) => any, ActionType<any>][]
     selector: (state: T) => Ref<any>
     provider

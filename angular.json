@@ -149,6 +149,32 @@
                 }
             },
             "schematics": {}
+        },
+        "fsm": {
+            "projectType": "library",
+            "root": "packages/fsm",
+            "sourceRoot": "packages/fsm/src",
+            "prefix": "aspect",
+            "architect": {
+                "lint": {
+                    "builder": "@angular-devkit/build-angular:tslint",
+                    "options": {
+                        "tsConfig": [
+                            "packages/fsm/tsconfig.lib.json",
+                            "packages/fsm/tsconfig.spec.json"
+                        ],
+                        "exclude": ["**/node_modules/**", "!packages/fsm/**/*"]
+                    }
+                },
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "options": {
+                        "jestConfig": "packages/fsm/jest.config.js",
+                        "passWithNoTests": true
+                    }
+                }
+            },
+            "schematics": {}
         }
     },
     "cli": {

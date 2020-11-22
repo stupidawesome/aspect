@@ -3,5 +3,6 @@ module.exports = {
         "<rootDir>/packages/core",
         "<rootDir>/packages/example",
         "<rootDir>/packages/store",
+        "<rootDir>/packages/fsm",
     ],
 }
