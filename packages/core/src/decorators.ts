@@ -63,7 +63,7 @@ export function UseFeatures() {
             return instance
         }
 
-        features.sort(([,a], [,b]) => {
+        features.reverse().sort(([,a], [,b]) => {
             const compA = (<any>Decorators)[a]
             const compB = (<any>Decorators)[b]
             if (compA < compB) {
@@ -86,19 +86,6 @@ enum Decorators {
     ContentCheck = "ContentCheck",
     ViewCheck = "ViewCheck",
     OnDestroy = "OnDestroy"
-}
-
-type Decorator<T extends Array<any>> = (...args: T) => (target: {}, propertyKey: symbol | string) => void
-type DecoratorNoParams = () => (target: {}, propertyKey: symbol | string) => void
-
-export function createDecorator(key: string): DecoratorNoParams
-export function createDecorator<T extends Array<any> = never[]>(key: string): Decorator<T>
-export function createDecorator(key: string): Decorator<unknown[]> {
-    return function (...args) {
-        return function(target, propertyKey) {
-            Reflection.defineMetadata(key, args, target, propertyKey)
-        }
-    }
 }
 
 export function DoCheck(paths: string | string[], aspectOptions: AspectOptions = {}): MethodDecorator {

@@ -1,5 +1,14 @@
 import { Component, Directive, Injectable } from '@angular/core';
-import { DoCheck, ErrorListener, Observe, OnInit, OnViewInit, Ref, UseFeatures } from '@aspect/core';
+import {
+    DoCheck,
+    ErrorListener,
+    Observe, OnContentInit,
+    OnInit,
+    OnViewInit,
+    Ref,
+    Stream,
+    UseFeatures
+} from '@aspect/core';
 import {
     Actions,
     createAction,
@@ -12,7 +21,8 @@ import {
     withReducers,
 } from "@aspect/store"
 import { of, pipe, throwError } from 'rxjs';
-import { delay, mapTo } from "rxjs/operators"
+import { delay, map, mapTo, tap } from 'rxjs/operators';
+import { createFsm, invoke, state, transition } from '../../../fsm/src/lib/schema';
 
 class AppState {
     count = new Ref(0)
@@ -44,6 +54,17 @@ const AppStore = createStore(AppState, [
     withEffects(appEffects),
 ])
 
+enum FState {}
+
+const interp = createFsm(FState, AppState)
+
+const Machine = interp(
+    state("idle", [
+        invoke(appEffects),
+        transition(Increment).to("loading").action(setCount)
+    ])
+)
+
 @Component({
     selector: "aspect-root",
     template: `
@@ -53,7 +74,7 @@ const AppStore = createStore(AppState, [
     `,
     styleUrls: ["./app.component.css"],
     providers: [
-        AppStore,
+        AppStore
     ],
     // changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -66,15 +87,15 @@ export class AppComponent {
         this.dispatcher.dispatch(Increment(1))
     }
 
-    @DoCheck("count()", { on: pipe(delay(1000)) })
+    @DoCheck("count()")
     logCount(previous: number) {
         const { count } = this
-        // return of(count() * 2).pipe(delay(1000), tap(count))
+        return Stream.from(count.pipe(delay(1000))).to(value => console.log(value))
     }
 
     @Observe(["count"], { on: delay(1000) })
     observeNested(value: any) {
-        return throwError(new Error("hi"))
+        // return throwError(new Error("hi"))
     }
 
     @ErrorListener()

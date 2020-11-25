@@ -1,7 +1,7 @@
 import { Type } from "@angular/core"
 import * as objectPath from "object-path"
-import { identity, ObservableInput, Subject, Subscribable } from 'rxjs';
-import { catchError, distinctUntilChanged, filter, switchAll } from 'rxjs/operators';
+import { identity, isObservable, Observable, observable, ObservableInput, Subject, Subscribable } from 'rxjs';
+import { catchError, distinctUntilChanged, filter, switchAll, tap } from 'rxjs/operators';
 import { AspectOptions } from "../interfaces"
 import { maybeSwitch } from "../utils"
 
@@ -39,6 +39,24 @@ function checkValues(instance: any, props: string[], method: Function, previousV
     }
 }
 
+function isSubscribable(value: any): value is Subscribable<any> {
+    return observable in Object(value)
+}
+
+function processOp(options: any, errorMap: any, context: any) {
+    return function (source: Observable<any>) {
+        return source.pipe(
+            filter(isSubscribable),
+            options.on ?? identity,
+            maybeSwitch(),
+            catchError((e, caught) => {
+                errorMap.get(context).next(e)
+                return caught
+            })
+        )
+    }
+}
+
 export function createCheckFeature(props: string[], descriptor: PropertyDescriptor, options: AspectOptions, lifecycleKey: string) {
     return function watchFeature(componentDef: Type<any>, errorMap: WeakMap<any, any>): void {
         const previousValuesMap = new WeakMap()
@@ -49,15 +67,7 @@ export function createCheckFeature(props: string[], descriptor: PropertyDescript
 
         componentDef.prototype.ngOnInit = wrap(componentDef.prototype.ngOnInit, function (this: any) {
             const process = new Subject<ObservableInput<any> | unknown>()
-            const stream = process.pipe(
-                filter((value): value is Subscribable<any> => "subscribe" in Object(value)),
-                options.on ?? identity,
-                maybeSwitch(),
-                catchError((e, caught) => {
-                    errorMap.get(this).next(e)
-                    return caught
-                })
-            )
+            const stream = process.pipe(processOp(options, errorMap, this))
             processMap.set(this, process)
             subscribeMap.set(this, stream.subscribe())
         })
@@ -82,15 +92,7 @@ export function createObserveFeature(props: string[], descriptor: PropertyDescri
 
         componentDef.prototype.ngOnInit = wrap(componentDef.prototype.ngOnInit, function (this: any) {
             const process = new Subject<ObservableInput<any> | unknown>()
-            const stream = process.pipe(
-                filter((value): value is Subscribable<any> => "subscribe" in Object(value)),
-                options.on ?? identity,
-                maybeSwitch(),
-                catchError((e, caught) => {
-                    errorMap.get(this).next(e)
-                    return caught
-                })
-            )
+            const stream = process.pipe(processOp(options, errorMap, this))
             processMap.set(this, process)
             subscribeMap.set(this, stream.subscribe())
             for (const prop of props) {
@@ -138,17 +140,9 @@ export function createInitFeature(descriptor: PropertyDescriptor, options: Aspec
         const processMap = new WeakMap()
         const subscribeMap = new WeakMap()
 
-        componentDef.prototype[lifecycleKey] = wrap(componentDef.prototype.ngOnInit, function (this: any) {
+        componentDef.prototype[lifecycleKey] = wrap(componentDef.prototype[lifecycleKey], function (this: any) {
             const process = new Subject<ObservableInput<any> | unknown>()
-            const stream = process.pipe(
-                filter((value): value is Subscribable<any> => "subscribe" in Object(value)),
-                options.on ?? identity,
-                maybeSwitch(),
-                catchError((e, caught) => {
-                    errorMap.get(this).next(e)
-                    return caught
-                })
-            )
+            const stream = process.pipe(processOp(options, errorMap, this))
             processMap.set(this, process)
             subscribeMap.set(this, stream.subscribe())
             process.next(descriptor.value.call(this))

@@ -1,11 +1,11 @@
-import { EMPTY, identity, isObservable, Observable, UnaryFunction } from "rxjs"
+import { EMPTY, identity, isObservable, observable, Observable, UnaryFunction } from 'rxjs';
 import { map, switchAll } from "rxjs/operators"
 import { Ref } from './ref';
 
 export function maybeSwitch() {
     return function (source: Observable<any>) {
         return source.pipe(
-            map((value) => (isObservable(value) ? value : EMPTY)),
+            map((value) => (observable in Object(value) ? value : EMPTY)),
             switchAll(),
         )
     }

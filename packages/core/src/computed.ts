@@ -1,6 +1,6 @@
 import {
     BehaviorSubject,
-    merge,
+    merge, observable,
     Observable,
     OperatorFunction,
     PartialObserver,
@@ -44,6 +44,10 @@ export class Computed<T> extends Callable<any> {
             this.previousValue = this.currentValue
             this.subject.next(this.currentValue)
         }
+    }
+
+    [observable]() {
+        return this
     }
 
     pipe(): Observable<T>;

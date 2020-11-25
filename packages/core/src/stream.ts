@@ -1,4 +1,4 @@
-import { Observable, Observer, PartialObserver, Subject, Subscription } from 'rxjs';
+import { observable, Observable, Observer, PartialObserver, Subject, Subscription } from 'rxjs';
 import { AnonymousSubject } from 'rxjs/internal-compatibility';
 import { Ref } from './ref';
 
@@ -9,32 +9,44 @@ function addSubscription(sub: Subscription) {
 export class Stream<T, U = T> {
     closed
 
-    private sink
+    private source: Observable<T>
 
     static from<T>(source: Observable<T> | Ref<T>) {
         return new Stream(source)
     }
 
+    [observable]() {
+        return this
+    }
+
     to<V extends U>(sink: ((value: U) => void)): Stream<T, V>
     to<V extends U>(sink: PartialObserver<V>): Stream<T, V>
     to<V extends U>(sink: any): Stream<T, V> {
-        sink = typeof sink === "function" ? { next: sink } : sink
-        const sub = new Subject()
-        sub.subscribe(sink)
-        return new Stream<T, V>(this.source, sub)
+        return new Stream<T, V>(this.source, sink)
     }
 
     subscribe(observer?: (value: U) => void): Subscription
     subscribe(observer?: PartialObserver<U>): Subscription
     subscribe(observer?: any): Subscription {
-        if (observer) {
-            this.sink.subscribe(observer)
-        }
-        return addSubscription(this.source.subscribe(this.sink))
+        return this.source.subscribe(observer)
     }
 
-    constructor(private source: Observable<T> | Ref<T>, sink?: Observer<T | U>) {
+    constructor(source: Observable<T> | Ref<T>, private sink?: Observer<T | U>) {
+        const subject = new Subject<any>()
+        const outerSub = new Subscription()
         this.closed = false
-        this.sink = new AnonymousSubject<T | U>(sink, source as Observable<T>)
+        this.source = new Observable(subscriber => {
+            const innerSub = subject.subscribe(subscriber)
+            if (subject.observers.length === 1) {
+                outerSub.add(subject.subscribe(sink))
+                outerSub.add(source.subscribe(subject))
+            }
+            return () => {
+                innerSub.unsubscribe()
+                if (subject.observers.length === 1) {
+                    outerSub.unsubscribe()
+                }
+            }
+        })
     }
 }

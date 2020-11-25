@@ -1,4 +1,12 @@
-import { BehaviorSubject, Observable, OperatorFunction, PartialObserver, Subject, Subscription } from 'rxjs';
+import {
+    BehaviorSubject,
+    observable,
+    Observable,
+    OperatorFunction,
+    PartialObserver,
+    Subject,
+    Subscription
+} from 'rxjs';
 import { Callable } from './callable';
 import { GetterSetter, UnwrapRefs } from './interfaces';
 import { collectDeps, flushDeps, pipeFromArray, track } from './utils';
@@ -70,6 +78,10 @@ export class Ref<T> extends Callable<GetterSetter<any>> {
     }
     private ref!: T | Ref<T> | (() => T)
     private readonly subject: BehaviorSubject<UnwrapRefs<T>>
+
+    [observable]() {
+        return this
+    }
 
     next(
         value: ((value: UnwrapRefs<T>) => any),
