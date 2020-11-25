@@ -57,7 +57,7 @@ describe("Ref", () => {
         given: result = fn()
         given: subject = new Ref(expected)
         when: subject.subscribe(result)
-        then: expect(result).not.toBeCalled()
+        then: expect(result).toBeCalled()
     })
 
     it("should trigger ref", () => {
@@ -68,7 +68,7 @@ describe("Ref", () => {
         given: subject = new Ref(values[0])
         when: subject.subscribe(result)
         when: subject(values[1])
-        then: expect(result).toHaveBeenNthCalledWith(1, values[1])
+        then: expect(result).toHaveBeenNthCalledWith(2, values[1])
     })
 
     it("should set nested refs", () => {
@@ -112,10 +112,10 @@ describe("Ref", () => {
         when: subject(expected)
         when: subject(expected2)
 
-        then: expect(result).toHaveBeenNthCalledWith(1, expected.nested)
-        then: expect(result).toHaveBeenNthCalledWith(2, expected)
-        then: expect(result).toHaveBeenNthCalledWith(3, expected2().nested())
-        then: expect(result).toHaveBeenNthCalledWith(4, unref(expected2))
+        then: expect(result).toHaveBeenNthCalledWith(3, expected.nested)
+        then: expect(result).toHaveBeenNthCalledWith(4, expected)
+        then: expect(result).toHaveBeenNthCalledWith(5, expected2().nested())
+        then: expect(result).toHaveBeenNthCalledWith(6, unref(expected2))
     })
 
     it("should accept setter functions", () => {
@@ -131,45 +131,6 @@ describe("Ref", () => {
         })
         when: result = subject().nested
 
-        then: expect(result).toBe(expected)
-    })
-
-    it("should track parent refs", () => {
-        let subject, subject2, expected, expected2, result, result2
-
-        given: expected = { nested: 10 }
-        given: expected2 = { nested: 20 }
-        given: subject = new Ref({ nested: 0 })
-        given: subject2 = new Ref(subject)
-
-        when: subject(expected)
-
-        then: result = subject()
-        then: expect(result).toEqual(expected)
-
-        when: subject2(expected2)
-
-        then: result = subject2.value
-        then: result2 = subject()
-        then: expect(result).toEqual(expected2)
-        then: expect(result2).toEqual(expected)
-    })
-
-    it("should compute values", () => {
-        let subject: Ref<number>,
-            subject2: Ref<number>,
-            subject3,
-            expected,
-            result
-
-        given: expected = 10 + 10 * 5 - 10
-        given: subject = new Ref(1)
-        given: subject2 = new Ref(() => subject() * 5)
-        given: subject3 = new Ref(() => subject() + subject2() - 10)
-
-        when: subject(10)
-
-        then: result = subject3()
         then: expect(result).toBe(expected)
     })
 

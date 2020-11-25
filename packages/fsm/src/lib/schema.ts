@@ -162,8 +162,8 @@ export class InvokeSchema {
     constructor(public id: string, public src: any, public type = "") {}
 }
 
-export function invoke(id: string, src: any) {
-    return new InvokeSchema(id, src)
+export function invoke(src: any) {
+    return new InvokeSchema(src.name, src)
 }
 
 export interface DocumentOrder {

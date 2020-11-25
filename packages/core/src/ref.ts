@@ -1,12 +1,7 @@
 import { BehaviorSubject, Observable, OperatorFunction, PartialObserver, Subject, Subscription } from 'rxjs';
 import { Callable } from './callable';
-import { pipeFromArray } from './utils';
-
-type GetterSetter<T> = (value: T) => T
-
-type UnwrapRefs<T> = {
-    [key in keyof T]: T[key] extends Ref<infer R> ? R : T[key]
-}
+import { GetterSetter, UnwrapRefs } from './interfaces';
+import { collectDeps, flushDeps, pipeFromArray, track } from './utils';
 
 export function copy(obj: any) {
     if (obj instanceof Map) {
@@ -67,10 +62,14 @@ export interface Ref<T> {
     (setter: (value: T) => any): T
     (value: T | Ref<T> | UnwrapRefs<T>): T
 }
+
 export class Ref<T> extends Callable<GetterSetter<any>> {
-    value: UnwrapRefs<T>
+    get value(): UnwrapRefs<T> {
+        track(this)
+        return this.subject.value
+    }
     private ref!: T | Ref<T> | (() => T)
-    private readonly subject: Subject<UnwrapRefs<T>>
+    private readonly subject: BehaviorSubject<UnwrapRefs<T>>
 
     next(
         value: ((value: UnwrapRefs<T>) => any),
@@ -116,7 +115,6 @@ export class Ref<T> extends Callable<GetterSetter<any>> {
     }
 
     private setValue(unwrappedValue: UnwrapRefs<T>) {
-        this.value = unwrappedValue
         if (this.ref instanceof Ref) {
             this.subject.next(unwrappedValue)
             return
@@ -174,13 +172,14 @@ export class Ref<T> extends Callable<GetterSetter<any>> {
 
     constructor(valueRef: AllowedTypes<T>) {
         super((...value: [T]) => {
+            track(this)
             if (value.length > 0) {
                 this.next(value[0])
+                return value[0]
             }
             return this.ref instanceof Function ? this.ref() : this.ref
         })
         this.ref = valueRef
-        this.value = unref(this)
-        this.subject = new Subject<UnwrapRefs<T>>()
+        this.subject = new BehaviorSubject<UnwrapRefs<T>>(unref(this))
     }
 }

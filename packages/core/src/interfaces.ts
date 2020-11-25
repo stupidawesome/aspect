@@ -1,5 +1,6 @@
 import { ɵComponentDef } from '@angular/core';
 import { OperatorFunction } from 'rxjs';
+import { Ref } from './ref';
 
 export type ComponentDef<T> = ɵComponentDef<T> & {
     onInit: Function
@@ -29,3 +30,9 @@ export interface ComponentDefFeature {
 }
 
 export type ComponentDefFeatures = ReadonlyArray<ComponentDefFeature>;
+
+export type GetterSetter<T> = (value: T) => T
+
+export type UnwrapRefs<T> = {
+    [key in keyof T]: T[key] extends Ref<infer R> ? R : T[key]
+}
