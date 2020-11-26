@@ -1,4 +1,6 @@
-import { ActionType, Reducer } from "@aspect/store"
+import { Injector, INJECTOR, Provider } from '@angular/core';
+import { Actions, ActionType, Reducer, STORE_INITIALIZER } from '@aspect/store';
+import { Interpreter } from './interpreter';
 
 export type Schema<T> = Array<
     StateSchema<any> | TransitionSchema | InvokeSchema
@@ -39,7 +41,6 @@ export interface HistoryContent {
 export class StateSchema<T = any> {
     initial
     mode
-    children
     parent: StateSchema
     ancestors: StateSchema[]
     descendants: StateSchema[]
@@ -56,7 +57,6 @@ export class StateSchema<T = any> {
     constructor(public id: string, children: any[], options: any) {
         this.initial = options.initial
         this.mode = options.mode
-        this.children = [] as Schema<any>[]
         this.descendants = []
         this.ancestors = []
         this.documentOrder = documentOrder++
@@ -70,7 +70,7 @@ export class StateSchema<T = any> {
 
         states.set(id, this)
 
-        for (const child of this.children) {
+        for (const child of children) {
             if (child instanceof StateSchema) {
                 child.parent = this
                 child.ancestors.push(this)
@@ -87,7 +87,7 @@ export class StateSchema<T = any> {
         this.atomic = this.descendants.length === 0
         this.depth = this.ancestors.length
 
-        for (const child of this.children){
+        for (const child of children){
             if (child instanceof TransitionSchema) {
                 this.transitions.push(child)
                 child.source = this
@@ -171,38 +171,15 @@ export interface DocumentOrder {
     depth: number
 }
 
-export function createFsm(finiteStates: any, dataModel: any) {
-    return schema
+export function createFsm(finiteStates: any, dataModel: any): (...children: Schema<any>) => Provider {
+    return function(...children: Schema<any>) {
+        return [{
+            provide: STORE_INITIALIZER,
+            useFactory: (injector: Injector) => {
+                return new Interpreter(injector, schema(...children))
+            },
+            deps: [INJECTOR],
+            multi: true
+        }]
+    }
 }
-
-// class State {}
-//
-// enum FSM {
-//     idle = "idle",
-//     loading = "loading",
-//     nested = "nested",
-//     error = "error"
-// }
-
-// const MyAction = createAction("MyAction")
-// const MyOtherAction = createAction("MyOtherAction")
-// const setRoot = createReducer(State)
-// const MyEffects = createEffect(Actions, State)
-// const interp = createFsm(FSM, State)
-
-// prettier-ignore
-// const Machine = interp(
-//     initial(FSM.idle, [
-//         transition(MyAction)
-//             .to(FSM.loading)
-//             .action(setRoot),
-//         state(FSM.nested, [
-//             transition(MyOtherAction)
-//                 .to(FSM.error)
-//         ])
-//     ]),
-//     final(FSM.loading, [
-//         invoke("MyEffects", MyEffects)
-//     ])
-// )
-

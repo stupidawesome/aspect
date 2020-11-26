@@ -10,6 +10,10 @@ export class Interpreter extends BaseInterpreter {
         super(schema, parent);
     }
 
+    onStoreInit() {
+
+    }
+
     on(event: string, callback: Function) {
         (
             this.callbacks.get(event) || this.callbacks.set(event, []).get(event)
@@ -17,6 +21,7 @@ export class Interpreter extends BaseInterpreter {
     }
 
     executeContent(content: any) {
+        console.log('execute!', content)
        // apply reducers
     }
 
@@ -58,20 +63,20 @@ export class Interpreter extends BaseInterpreter {
     }
 
     invoke(inv: InvokeSchema) {
-        const { invokes } = this;
+        const { invokes, injector } = this;
 
-        if (!inv.type) {
-            if (invokes[inv.id]) {
-                throw new Error(`Already invoked "${inv.id}"`);
-            }
-            const child = new Interpreter(this.injector, inv.src);
-            invokes[inv.id] = child;
+        invokes[inv.id] = injector?.get(inv.src)
 
-            child.on("done", () => {
-                this.send(`done.invoke.${inv.id}`);
-            });
-        } else {
-            invokes[inv.id] = this.injector.get(inv.src)
-        }
+        // if (!inv.type) {
+        //     if (invokes[inv.id]) {
+        //         throw new Error(`Already invoked "${inv.id}"`);
+        //     }
+        //     const child = new Interpreter(this.injector, inv.src);
+        //     invokes[inv.id] = child;
+        //
+        //     child.on("done", () => {
+        //         this.send(`done.invoke.${inv.id}`);
+        //     });
+        // }
     }
 }

@@ -295,6 +295,7 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
             loop: for (const s of [state].concat(
                 getProperAncestors(state, null),
             )) {
+                console.log('hi!', s)
                 for (const t of s.transitions.slice().sort(documentOrder)) {
                     if (!t.event && conditionMatch(t, context)) {
                         enabledTransitions.add(t)
@@ -396,6 +397,7 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
                         )
                     }
                 }
+
                 if (!enabledTransitions.isEmpty()) {
                     this.microstep(enabledTransitions.toList())
                 }

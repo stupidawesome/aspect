@@ -23,7 +23,7 @@ import { catchError, delay, filter, scan } from "rxjs/operators"
 
 const REDUCERS = new InjectionToken("REDUCERS")
 const EFFECTS = new InjectionToken("EFFECTS")
-const STORE_INITIALIZER = new InjectionToken<StoreInitializer[]>(
+export const STORE_INITIALIZER = new InjectionToken<StoreInitializer[]>(
     "STORE_INITIALIZER",
 )
 

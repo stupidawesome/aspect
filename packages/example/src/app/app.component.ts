@@ -1,4 +1,4 @@
-import { Component, Directive, Injectable } from '@angular/core';
+import { Component, Directive, Inject, Injectable } from '@angular/core';
 import {
     DoCheck,
     ErrorListener,
@@ -16,13 +16,13 @@ import {
     createReducer,
     createStore,
     Dispatcher,
-    ofType,
+    ofType, STORE_INITIALIZER,
     withEffects,
-    withReducers,
-} from "@aspect/store"
+    withReducers
+} from '@aspect/store';
 import { of, pipe, throwError } from 'rxjs';
 import { delay, map, mapTo, tap } from 'rxjs/operators';
-import { createFsm, invoke, state, transition } from '../../../fsm/src/lib/schema';
+import { createFsm, initial, invoke, state, transition } from '../../../fsm/src/lib/schema';
 
 class AppState {
     count = new Ref(0)
@@ -49,19 +49,16 @@ const appEffects = createEffect(Actions)
         )
     })
 
-const AppStore = createStore(AppState, [
-    withReducers(setCount),
-    withEffects(appEffects),
-])
+const AppStore = createStore(AppState)
 
 enum FState {}
 
 const interp = createFsm(FState, AppState)
 
 const Machine = interp(
-    state("idle", [
+    initial("idle", [
         invoke(appEffects),
-        transition(Increment).to("loading").action(setCount)
+        transition(Increment).action(setCount)
     ])
 )
 
@@ -74,7 +71,8 @@ const Machine = interp(
     `,
     styleUrls: ["./app.component.css"],
     providers: [
-        AppStore
+        AppStore,
+        Machine
     ],
     // changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -82,9 +80,10 @@ const Machine = interp(
 export class AppComponent {
     count
     nested
+    machine: any
 
     increment() {
-        this.dispatcher.dispatch(Increment(1))
+        this.machine.send(Increment(1))
     }
 
     @DoCheck("count()")
@@ -108,9 +107,12 @@ export class AppComponent {
         console.log('hi init!')
     }
 
-    constructor(state: AppState, private dispatcher: Dispatcher) {
+    constructor(state: AppState, private dispatcher: Dispatcher, @Inject(STORE_INITIALIZER) machine: any) {
         this.count = state.count
         this.nested = state.nested
+        this.machine = machine[0]
+
+        console.log('machine', machine)
 
         state.count.subscribe((value) => {
             state.nested(nested => {
