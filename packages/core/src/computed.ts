@@ -1,14 +1,14 @@
 import {
-    BehaviorSubject,
+    BehaviorSubject, defer,
     merge, observable,
-    Observable,
+    Observable, of,
     OperatorFunction,
     PartialObserver,
     ReplaySubject,
     Subject,
     Subscription
 } from 'rxjs';
-import { startWith } from 'rxjs/operators';
+import { mergeMapTo, startWith } from 'rxjs/operators';
 import { Callable } from './callable';
 import { UnwrapRefs } from './interfaces';
 import { Ref } from './ref';
@@ -30,6 +30,7 @@ export class Computed<T> extends Callable<any> {
     private previousValues?: any[]
     private currentValue: any
     private previousValue: any
+    private source: any
 
     private computeValue() {
         const { deps, previousValues } = this
@@ -63,14 +64,13 @@ export class Computed<T> extends Callable<any> {
     pipe<A, B, C, D, E, F, G, H, I>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>, op5: OperatorFunction<D, E>, op6: OperatorFunction<E, F>, op7: OperatorFunction<F, G>, op8: OperatorFunction<G, H>, op9: OperatorFunction<H, I>, ...operations: OperatorFunction<any, any>[]): Observable<{}>;
 
     pipe(...operators: any[]) {
-        return this.subject.asObservable().pipe(pipeFromArray(operators))
+        return this.source.pipe(pipeFromArray(operators))
     }
 
     subscribe(observer?: (value: T) => void): Subscription
     subscribe(observer?: PartialObserver<T>): Subscription
     subscribe(observer?: any): Subscription {
-        this.computeValue()
-        return this.subject.subscribe(observer)
+        return this.source.subscribe(observer)
     }
 
     constructor(setter: () => T) {
@@ -85,6 +85,9 @@ export class Computed<T> extends Callable<any> {
         })
         this.ref = setter
         this.deps = setter instanceof Ref ? new Set<any>([setter]) : new Set<any>()
-        this.subject = new ReplaySubject<T>(1)
+        this.subject = new Subject<T>()
+        this.source = defer(() => of(this.value)).pipe(
+            mergeMapTo(this.subject.asObservable())
+        )
     }
 }
