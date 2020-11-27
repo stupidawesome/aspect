@@ -36,7 +36,7 @@ const Multiply = createAction("Multiply").withData<number>()
 
 const reducer = createReducer(AppState)
 const setCount = reducer
-    .select(state => state.count)
+    .select(data => data.count)
     .add((count, increment) => count + increment, [Increment])
     .add((count, multiplier) => count * multiplier, [Multiply])
 
@@ -51,16 +51,19 @@ const appEffects = createEffect(Actions)
 
 const AppStore = createStore(AppState)
 
-enum FState {}
+enum State {
+    idle = "idle",
+    loading = "loading"
+}
 
-const interp = createFsm(FState, AppState)
+const interp = createFsm(State, AppState)
 
 const Machine = interp(
-    initial("idle", [
+    initial(State.idle, [
         invoke(appEffects),
-        transition(Increment).action(setCount).to("loading")
+        transition(Increment).action(setCount).to(State.loading)
     ]),
-    state("loading", [
+    state(State.loading, [
         invoke(appEffects),
         transition(Increment).action(setCount)
     ])
@@ -111,15 +114,15 @@ export class AppComponent {
         console.log('hi init!')
     }
 
-    constructor(state: AppState, private dispatcher: Dispatcher, @Inject(STORE_INITIALIZER) machine: any) {
-        this.count = state.count
-        this.nested = state.nested
+    constructor(data: AppState, private dispatcher: Dispatcher, @Inject(STORE_INITIALIZER) machine: any) {
+        this.count = data.count
+        this.nested = data.nested
         this.machine = machine[0]
 
         console.log('machine', machine)
 
-        state.count.subscribe((value) => {
-            state.nested(nested => {
+        data.count.subscribe((value) => {
+            data.nested(nested => {
                 nested.count = value
             })
         })
