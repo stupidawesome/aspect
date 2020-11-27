@@ -58,6 +58,10 @@ const interp = createFsm(FState, AppState)
 const Machine = interp(
     initial("idle", [
         invoke(appEffects),
+        transition(Increment).action(setCount).to("loading")
+    ]),
+    state("loading", [
+        invoke(appEffects),
         transition(Increment).action(setCount)
     ])
 )

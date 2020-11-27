@@ -62,7 +62,7 @@ export class StoreService implements StoreInitializer, OnDestroy {
                         filter((_action) =>
                             (<any[]>allowedActions).some(
                                 (allowedAction) =>
-                                    allowedAction.type === _action.type,
+                                    allowedAction.name === _action.name,
                             ),
                         ),
                         scan((nextState, action) => {
@@ -147,7 +147,7 @@ export function ofType<
         return source.pipe(
             filter((_action) =>
                 actionTypes.some(
-                    (actionType) => (<any>actionType).type === _action.type,
+                    (actionType) => (<any>actionType).name === _action.name,
                 ),
             ),
         ) as Observable<ReturnType<T[number]>>
@@ -235,19 +235,19 @@ class ActionBuilder<
         fn: U,
     ): ReturnType<ActionBuilder<TType, U>["create"]>
     withData(fn = (data: TData) => data): any {
-        return new ActionBuilder(this.type, fn).create()
+        return new ActionBuilder(this.name, fn).create()
     }
 
     create() {
-        const { data, type } = this
+        const { data, name } = this
         function action(
             ...args: TData extends (...args: infer R) => infer S ? R : never
         ) {
             const _action = {}
             const value = data(...args)
             Object.defineProperties(_action, {
-                type: {
-                    value: type,
+                name: {
+                    value: name,
                 },
                 data: {
                     enumerable: true,
@@ -255,7 +255,7 @@ class ActionBuilder<
                 },
             })
             return _action as {
-                readonly type: TType
+                readonly name: TType
                 readonly data: TData extends (...args: any[]) => infer S
                     ? void extends S
                         ? undefined
@@ -263,15 +263,18 @@ class ActionBuilder<
                     : undefined
             }
         }
-        action.type = this.type
+        Object.defineProperty(action, "name", {
+            value: this.name,
+            enumerable: true
+        })
         return action
     }
 
-    constructor(readonly type: TType, private data: TData) {}
+    constructor(readonly name: TType, private data: TData) {}
 }
 
-export function createAction<T extends string>(type: T) {
-    return new ActionBuilder(type, () => {})
+export function createAction<T extends string>(name: T) {
+    return new ActionBuilder(name, () => {})
 }
 
 export function createStore(
@@ -297,7 +300,7 @@ export function createStore(
 }
 
 export interface Action {
-    readonly type: string
+    readonly name: string
     readonly data: unknown
 }
 

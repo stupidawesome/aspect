@@ -36,12 +36,12 @@ export function isAtomicState(state: StateSchema) {
     return state.atomic;
 }
 
-export function conditionMatch(transition: TransitionSchema, context: any) {
-    return !transition.cond(context);
+export function conditionMatch(transition: TransitionSchema, state: any, event: any) {
+    return transition.cond(state, event);
 }
 
-export function nameMatch(event: string[], name: string) {
-    return event.includes(name);
+export function nameMatch(events: any[], eventType: any) {
+    return events.some(e => e.name === eventType.name);
 }
 
 export function isCancelEvent(event: any) {

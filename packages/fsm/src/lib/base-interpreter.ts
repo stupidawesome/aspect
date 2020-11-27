@@ -32,14 +32,12 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
     context = {}
     invokes: { [key: string]: any } = {}
     parent?: BaseInterpreter
+    abstract state: any
+    protected event?: ScxmlEvent;
 
-    constructor(schema: Schema<T>, parent?: BaseInterpreter) {
-        const doc = schema
+    constructor(protected schema: Schema<T>, parent?: BaseInterpreter) {
         this.parent = parent
         this.running = true
-        const initialState = doc.find(element => element instanceof StateSchema && element.initial) as StateSchema
-        this.enterStates([new TransitionSchema().to(initialState.id)])
-        void this.mainEventLoop()
     }
 
     isInFinalState(state: StateSchema): boolean {
@@ -105,7 +103,7 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
                 }
             } else {
                 defaultHistoryContent[
-                    state.parent.id
+                    state.parent?.id ?? ""
                     ] = state.transitions.reduce((a, t) => a.concat(t.actions), [] as Reducer<any, any>[])
 
                 for (const s of state.transitions[0].target) {
@@ -295,9 +293,8 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
             loop: for (const s of [state].concat(
                 getProperAncestors(state, null),
             )) {
-                console.log('hi!', s)
                 for (const t of s.transitions.slice().sort(documentOrder)) {
-                    if (!t.event && conditionMatch(t, context)) {
+                    if (!t.event && conditionMatch(t, this.state, this.event)) {
                         enabledTransitions.add(t)
                         break loop
                     }
@@ -322,9 +319,9 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
             )) {
                 for (const t of s.transitions.slice().sort(documentOrder)) {
                     if (
-                        t.event &&
+                        t.event.length &&
                         nameMatch(t.event, event.name) &&
-                        conditionMatch(t, context)
+                        conditionMatch(t, this.state, this.event)
                     ) {
                         enabledTransitions.add(t)
                         break loop
@@ -337,6 +334,7 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
     }
 
     microstep(enabledTransitions: TransitionSchema[]) {
+        console.log('enabledTransitions', enabledTransitions)
         this.exitStates(enabledTransitions)
         this.executeTransitionContent(enabledTransitions)
         this.enterStates(enabledTransitions)
@@ -345,6 +343,7 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
     exitStates(enabledTransitions: TransitionSchema[]) {
         const { configuration, statesToInvoke, historyValue } = this
         const statesToExit = this.computeExitSet(enabledTransitions)
+        console.log('statesToExit', statesToExit)
         for (const s of statesToExit) {
             statesToInvoke.delete(s)
         }
@@ -423,6 +422,7 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
             // our parent session also might cancel us. The mechanism for this is platform specific,
             // but here we assume it’s a special event we receive
             const externalEvent: ScxmlEvent = await externalQueue.dequeue()
+            this.event = externalEvent
             if (isCancelEvent(externalEvent)) {
                 this.running = false
                 continue
@@ -432,12 +432,13 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
                     if (inv.id === externalEvent.invokeid) {
                         this.applyFinalize(inv, externalEvent)
                     }
-                    if (inv.autoforward || inv.id === externalEvent.target) {
+                    if (inv.autoforward || inv.id && inv.id === externalEvent.target) {
                         this.send(externalEvent, inv.id)
                     }
                 }
             }
             enabledTransitions = this.selectTransitions(externalEvent)
+
             if (!enabledTransitions.isEmpty()) {
                 this.microstep(enabledTransitions.toList())
             }
@@ -449,15 +450,6 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
 
     exitInterpreter() {
         const { configuration } = this
-        console.log(
-            "final state:",
-            configuration
-                .toList()
-                .sort(exitOrder)
-                .filter(Boolean)
-                .map(s => s.id)
-                .join(", "),
-        )
         const statesToExit = configuration.toList().sort(exitOrder)
         for (const s of statesToExit) {
             this.executeContent(s.onexit)

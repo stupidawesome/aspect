@@ -1,4 +1,4 @@
-import { Injector, INJECTOR, Provider } from '@angular/core';
+import { InjectionToken, Injector, INJECTOR, Provider } from '@angular/core';
 import { Actions, ActionType, Reducer, STORE_INITIALIZER } from '@aspect/store';
 import { Interpreter } from './interpreter';
 
@@ -19,13 +19,13 @@ export enum StateMode {
 
 export interface ScxmlEvent {
     name: string;
-    type: "internal" | "external";
-    sendId: string | undefined;
-    origin: string | undefined;
-    originType: string | undefined;
-    invokeid: string | undefined;
+    type?: "internal" | "external";
+    sendId?: string | undefined;
+    origin?: any;
+    originType?: string | undefined;
+    invokeid?: string | undefined;
     data: any;
-    target: string;
+    target?: string;
 }
 
 let documentOrder = 0
@@ -38,10 +38,28 @@ export interface HistoryContent {
     [key: string]: Reducer<any, any>[];
 }
 
+const rootElement: StateSchema = {
+    id: "__ROOT__",
+    ancestors: [],
+    atomic: false,
+    depth: 0,
+    descendants: [],
+    documentOrder: 0,
+    donedata: undefined,
+    history: [],
+    initial: undefined,
+    invoke: [],
+    mode: undefined,
+    onentry: [],
+    onexit: [],
+    parent: null,
+    transitions: []
+}
+
 export class StateSchema<T = any> {
     initial
     mode
-    parent: StateSchema
+    parent: StateSchema | null
     ancestors: StateSchema[]
     descendants: StateSchema[]
     atomic
@@ -58,9 +76,9 @@ export class StateSchema<T = any> {
         this.initial = options.initial
         this.mode = options.mode
         this.descendants = []
-        this.ancestors = []
+        this.ancestors = [rootElement]
         this.documentOrder = documentOrder++
-        this.parent = this
+        this.parent = rootElement as any
         this.transitions = []
         this.invoke = []
         this.onentry = []
@@ -137,10 +155,12 @@ export class TransitionSchema {
 
     when(cond: (state: any, action: any) => boolean) {
         this.cond = cond
+        return this
     }
 
     action(...actions: Reducer<any, any>[]) {
         this.actions = actions
+        return this
     }
 
     constructor(...events: ActionType<any>[]) {
@@ -162,14 +182,18 @@ export class InvokeSchema {
     constructor(public id: string, public src: any, public type = "") {}
 }
 
+let invId = 0
+
 export function invoke(src: any) {
-    return new InvokeSchema(src.name, src)
+    return new InvokeSchema(`$$inv${invId++}`, src)
 }
 
 export interface DocumentOrder {
     documentOrder: number
     depth: number
 }
+
+export const EXTENDED_STATE = new InjectionToken("EXTENDED_STATE")
 
 export function createFsm(finiteStates: any, dataModel: any): (...children: Schema<any>) => Provider {
     return function(...children: Schema<any>) {
@@ -180,6 +204,9 @@ export function createFsm(finiteStates: any, dataModel: any): (...children: Sche
             },
             deps: [INJECTOR],
             multi: true
+        }, {
+            provide: EXTENDED_STATE,
+            useExisting: dataModel
         }]
     }
 }
