@@ -10,6 +10,8 @@ import {
 import { Callable } from './callable';
 import { GetterSetter, UnwrapRefs } from './interfaces';
 import { collectDeps, flushDeps, pipeFromArray, track } from './utils';
+import { Computed } from "./computed"
+import { Signal } from "./signal"
 
 export function copy(obj: any) {
     if (obj instanceof Map) {
@@ -66,22 +68,11 @@ function isPrimitive<T extends Primitive>(value: T | unknown): value is T {
 type AllowedTypes<T extends Primitive | Object | Array<any> | Set<any> | Map<any, any>> = T | Ref<T> | (() => T)
 
 export interface Ref<T> {
+    readonly value: T
+
     (): T
     (setter: (value: T) => any): T
     (value: T | Ref<T> | UnwrapRefs<T>): T
-}
-
-export class Ref<T> extends Callable<GetterSetter<any>> {
-    get value(): UnwrapRefs<T> {
-        track(this)
-        return this.subject.value
-    }
-    private ref!: T | Ref<T> | (() => T)
-    private readonly subject: BehaviorSubject<UnwrapRefs<T>>
-
-    [observable]() {
-        return this
-    }
 
     next(
         value: ((value: UnwrapRefs<T>) => any),
@@ -95,6 +86,48 @@ export class Ref<T> extends Callable<GetterSetter<any>> {
     next(
         value: T
     ): void
+
+
+    pipe(): Observable<T>;
+    pipe<A>(op1: OperatorFunction<T, A>): Observable<A>;
+    pipe<A, B>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>): Observable<B>;
+    pipe<A, B, C>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>): Observable<C>;
+    pipe<A, B, C, D>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>): Observable<D>;
+    pipe<A, B, C, D, E>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>, op5: OperatorFunction<D, E>): Observable<E>;
+    pipe<A, B, C, D, E, F>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>, op5: OperatorFunction<D, E>, op6: OperatorFunction<E, F>): Observable<F>;
+    pipe<A, B, C, D, E, F, G>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>, op5: OperatorFunction<D, E>, op6: OperatorFunction<E, F>, op7: OperatorFunction<F, G>): Observable<G>;
+    pipe<A, B, C, D, E, F, G, H>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>, op5: OperatorFunction<D, E>, op6: OperatorFunction<E, F>, op7: OperatorFunction<F, G>, op8: OperatorFunction<G, H>): Observable<H>;
+    pipe<A, B, C, D, E, F, G, H, I>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>, op5: OperatorFunction<D, E>, op6: OperatorFunction<E, F>, op7: OperatorFunction<F, G>, op8: OperatorFunction<G, H>, op9: OperatorFunction<H, I>): Observable<I>;
+    pipe<A, B, C, D, E, F, G, H, I>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>, op5: OperatorFunction<D, E>, op6: OperatorFunction<E, F>, op7: OperatorFunction<F, G>, op8: OperatorFunction<G, H>, op9: OperatorFunction<H, I>, ...operations: OperatorFunction<any, any>[]): Observable<{}>;
+
+    subscribe(observer?: (value: T) => void): Subscription
+    subscribe(observer?: PartialObserver<T>): Subscription
+}
+
+type RefType = {
+    new<T extends (...args: any[]) => AllowedTypes<any>>(value: T): Ref<ReturnType<T>>
+    new<T extends AllowedTypes<any>>(): Ref<T | undefined>
+    new<T extends AllowedTypes<any>>(value: T): Ref<T>
+}
+
+export const Ref: RefType = class <T> extends Callable<GetterSetter<T>> {
+    private ref!: T | Ref<T> | (() => T)
+    private readonly subject: BehaviorSubject<UnwrapRefs<T>>
+
+    static [Symbol.hasInstance](value: any) {
+        const proto = Object.getPrototypeOf(value)
+        return refTypes.some(proto)
+    }
+
+    get value(): UnwrapRefs<T> {
+        track(this)
+        return this.subject.value
+    }
+
+    [observable]() {
+        return this
+    }
+
     next(
         value: any,
     ): void {
@@ -109,18 +142,6 @@ export class Ref<T> extends Callable<GetterSetter<any>> {
             this.setValue(unref(value))
         }
     }
-
-    pipe(): Observable<T>;
-    pipe<A>(op1: OperatorFunction<T, A>): Observable<A>;
-    pipe<A, B>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>): Observable<B>;
-    pipe<A, B, C>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>): Observable<C>;
-    pipe<A, B, C, D>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>): Observable<D>;
-    pipe<A, B, C, D, E>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>, op5: OperatorFunction<D, E>): Observable<E>;
-    pipe<A, B, C, D, E, F>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>, op5: OperatorFunction<D, E>, op6: OperatorFunction<E, F>): Observable<F>;
-    pipe<A, B, C, D, E, F, G>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>, op5: OperatorFunction<D, E>, op6: OperatorFunction<E, F>, op7: OperatorFunction<F, G>): Observable<G>;
-    pipe<A, B, C, D, E, F, G, H>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>, op5: OperatorFunction<D, E>, op6: OperatorFunction<E, F>, op7: OperatorFunction<F, G>, op8: OperatorFunction<G, H>): Observable<H>;
-    pipe<A, B, C, D, E, F, G, H, I>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>, op5: OperatorFunction<D, E>, op6: OperatorFunction<E, F>, op7: OperatorFunction<F, G>, op8: OperatorFunction<G, H>, op9: OperatorFunction<H, I>): Observable<I>;
-    pipe<A, B, C, D, E, F, G, H, I>(op1: OperatorFunction<T, A>, op2: OperatorFunction<A, B>, op3: OperatorFunction<B, C>, op4: OperatorFunction<C, D>, op5: OperatorFunction<D, E>, op6: OperatorFunction<E, F>, op7: OperatorFunction<F, G>, op8: OperatorFunction<G, H>, op9: OperatorFunction<H, I>, ...operations: OperatorFunction<any, any>[]): Observable<{}>;
 
     pipe(...operators: any[]) {
         return this.subject.asObservable().pipe(pipeFromArray(operators))
@@ -176,13 +197,11 @@ export class Ref<T> extends Callable<GetterSetter<any>> {
         this.subject.next(unwrappedValue)
     }
 
-    subscribe(observer?: (value: T) => void): Subscription
-    subscribe(observer?: PartialObserver<T>): Subscription
     subscribe(observer?: any): Subscription {
         return this.subject.subscribe(observer)
     }
 
-    constructor(valueRef: AllowedTypes<T>) {
+    constructor(valueRef: T) {
         super((...value: [T]) => {
             track(this)
             if (value.length > 0) {
@@ -194,4 +213,6 @@ export class Ref<T> extends Callable<GetterSetter<any>> {
         this.ref = valueRef
         this.subject = new BehaviorSubject<UnwrapRefs<T>>(unref(this))
     }
-}
+} as unknown as RefType
+
+const refTypes = [Ref, Computed, Signal]

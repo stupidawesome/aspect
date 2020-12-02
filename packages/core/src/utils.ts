@@ -1,6 +1,6 @@
-import { EMPTY, identity, isObservable, observable, Observable, UnaryFunction } from 'rxjs';
+import { EMPTY, identity, observable, Observable, UnaryFunction } from "rxjs"
 import { map, switchAll } from "rxjs/operators"
-import { Ref } from './ref';
+import { Ref } from "./ref"
 
 export function maybeSwitch() {
     return function (source: Observable<any>) {
@@ -11,18 +11,23 @@ export function maybeSwitch() {
     }
 }
 
-export function pipeFromArray<T, R>(fns: Array<UnaryFunction<T, R>>): UnaryFunction<T, R> {
+export function pipeFromArray<T, R>(
+    fns: Array<UnaryFunction<T, R>>,
+): UnaryFunction<T, R> {
     if (fns.length === 0) {
-        return identity as UnaryFunction<any, any>;
+        return identity as UnaryFunction<any, any>
     }
 
     if (fns.length === 1) {
-        return fns[0];
+        return fns[0]
     }
 
     return function piped(input: T): R {
-        return fns.reduce((prev: any, fn: UnaryFunction<T, R>) => fn(prev), input as any);
-    };
+        return fns.reduce(
+            (prev: any, fn: UnaryFunction<T, R>) => fn(prev),
+            input as any,
+        )
+    }
 }
 
 let refDeps = new Set<Ref<any>>()

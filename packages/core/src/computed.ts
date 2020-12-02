@@ -24,7 +24,7 @@ export class Computed<T> extends Callable<any> {
         return this.currentValue
     }
 
-    private ref!: (() => T)
+    private ref: (() => T)
     private readonly subject: Subject<T>
     private deps
     private previousValues?: any[]
