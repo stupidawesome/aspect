@@ -116,8 +116,7 @@ export class EffectsService implements OnDestroy {
 
         for (const effectFactory of effectFactories) {
             const deps = injector.get(effectFactory.deps)
-            const { options } = effectFactory
-            for (const effect of effectFactory.effects) {
+            for (const [effect, options] of effectFactory.effects) {
                 const source: Observable<Action> = effect(deps, state).pipe(
                     catchError((error) => {
                         if (options.restartOnError) {
@@ -198,17 +197,15 @@ class EffectFactory<
 > {
     deps
     effects
-    options
 
-    add(fn: (ctx: InstanceType<T>, state: U) => any) {
-        this.effects.push(fn)
+    add(fn: (ctx: InstanceType<T>, state: U) => any, options: EffectOptions = defaultEffectOptions) {
+        this.effects.push([fn, options])
         return this
     }
 
     constructor(deps: T) {
         this.deps = deps
-        this.effects = [] as Function[]
-        this.options = defaultEffectOptions
+        this.effects = [] as [Function, EffectOptions][]
     }
 }
 

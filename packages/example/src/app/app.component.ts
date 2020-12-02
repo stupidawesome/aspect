@@ -17,7 +17,7 @@ import {
     Dispatch,
     ofType,
 } from "@aspect/store"
-import { delay, mapTo } from "rxjs/operators"
+import { delay, map, mapTo } from "rxjs/operators"
 import {
     createFsm,
     final,
@@ -45,8 +45,18 @@ const setCount = reducer
     .add((count, multiplier) => count * multiplier, [Multiply])
 
 const appEffects = createEffect(Actions).add((actions) => {
-    return actions.pipe(ofType(Increment), delay(1000), mapTo(Multiply(2)))
-})
+    return actions.pipe(
+        ofType(Increment),
+        delay(1000),
+        mapTo(Multiply(2)),
+        map((v) => {
+            if (Math.random() > 0.5) {
+                throw new Error("huh")
+            }
+            return v
+        }),
+    )
+}, { restartOnError: true })
 
 const AppStore = createStore(AppState)
 
