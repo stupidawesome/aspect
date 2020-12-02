@@ -123,7 +123,7 @@ export function initial<T>(name: string, children: any[]) {
     return new StateSchema<T>(name, children, { initial: true, mode: StateMode.default })
 }
 
-export function final<T>(name: string, children: any[]) {
+export function final<T>(name: string, children: any[] = []) {
     return new StateSchema<T>(name, children, { mode: StateMode.final })
 }
 

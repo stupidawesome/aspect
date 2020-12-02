@@ -2,20 +2,20 @@ import { DocumentOrder, ScxmlEvent, StateMode, StateSchema, TransitionSchema } f
 
 export function entryOrder(state1: DocumentOrder, state2: DocumentOrder) {
     if (state1.depth < state2.depth) {
-        return 1;
+        return -1;
     }
     if (state1.depth > state2.depth) {
-        return -1;
+        return 1;
     }
     return documentOrder(state1, state2);
 }
 
 export function documentOrder(state1: DocumentOrder, state2: DocumentOrder) {
     if (state1.documentOrder < state2.documentOrder) {
-        return 1;
+        return -1;
     }
     if (state1.documentOrder > state2.documentOrder) {
-        return -1;
+        return 1;
     }
     return 0;
 }

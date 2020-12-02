@@ -64,7 +64,8 @@ export class Interpreter extends BaseInterpreter implements OnDestroy {
         const instance = this.invokes[inv.id]
         if (instance instanceof BaseInterpreter) {
             instance.exitInterpreter()
-        } else {
+        }
+        if (instance) {
             instance.ngOnDestroy?.()
             instance.unsubscribe?.()
         }

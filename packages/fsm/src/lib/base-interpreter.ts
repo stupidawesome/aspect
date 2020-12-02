@@ -339,7 +339,6 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
     }
 
     microstep(enabledTransitions: TransitionSchema[]) {
-        console.log('enabledTransitions', enabledTransitions)
         this.exitStates(enabledTransitions)
         this.executeTransitionContent(enabledTransitions)
         this.enterStates(enabledTransitions)
@@ -348,7 +347,6 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
     exitStates(enabledTransitions: TransitionSchema[]) {
         const { configuration, statesToInvoke, historyValue } = this
         const statesToExit = this.computeExitSet(enabledTransitions)
-        console.log('statesToExit', statesToExit)
         for (const s of statesToExit) {
             statesToInvoke.delete(s)
         }

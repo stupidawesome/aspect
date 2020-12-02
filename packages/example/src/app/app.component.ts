@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, forwardRef } from "@angular/core"
 import {
     DoCheck,
     ErrorListener,
-    Observe, OnInit,
-    OnViewInit,
+    Observe,
+    OnInit,
     Ref,
     Stream,
     UseFeatures,
@@ -13,15 +13,17 @@ import {
     createAction,
     createEffect,
     createReducer,
-    createStore, Dispatch,
-    Dispatcher,
+    createStore,
+    Dispatch,
     ofType,
 } from "@aspect/store"
 import { delay, mapTo } from "rxjs/operators"
 import {
     createFsm,
+    final,
     initial,
-    invoke, MachineState,
+    invoke,
+    MachineState,
     state,
     transition,
 } from "../../../fsm/src/lib/schema"
@@ -51,6 +53,7 @@ const AppStore = createStore(AppState)
 enum State {
     idle = "idle",
     loading = "loading",
+    done = "done",
 }
 
 const interp = createFsm(
@@ -60,13 +63,18 @@ const interp = createFsm(
 
 const Machine = interp(
     initial(State.idle, [
-        invoke(appEffects),
         transition(Increment).action(setCount).to(State.loading),
     ]),
     state(State.loading, [
         invoke(appEffects),
-        transition(Increment).action(setCount),
+        transition()
+            .when((state: any) => state.count() >= 10)
+            .to(State.done),
+        transition(Increment)
+            .when((state: any) => state.count() < 10)
+            .action(setCount),
     ]),
+    final(State.done, []),
 )
 
 @Component({
@@ -78,7 +86,7 @@ const Machine = interp(
     `,
     styleUrls: ["./app.component.css"],
     providers: [Machine],
-    changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush,
 })
 @UseFeatures()
 export class AppComponent {
@@ -92,7 +100,7 @@ export class AppComponent {
     logCount(previous: number) {
         const { count } = this
         return Stream.from(count.pipe(delay(1000))).to((value) =>
-            console.log(value),
+            console.log("count:prev", previous, "count:next", value),
         )
     }
 
@@ -113,6 +121,6 @@ export class AppComponent {
 
     constructor(private dispatch: Dispatch, private machine: MachineState) {
         this.count = new Ref<number>(0)
-        console.log('state', this.machine)
+        console.log(machine)
     }
 }
