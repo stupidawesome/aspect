@@ -38,7 +38,7 @@ describe("State", () => {
         given: TestAction = createAction("TestAction").withData<number>()
         given: expected = 10
         given: TestState = createState(() => new Ref(0))
-        given: testReducer = createReducer(TestState).add(
+        given: testReducer = createReducer(TestState).case(
             (state, action) => {
                return action
             },
@@ -67,7 +67,7 @@ describe("State", () => {
         )
         given: testReducer = createReducer(TestState)
             .select((state) => state().nested)
-            .add(
+            .case(
                 (state, action) => {
                     return action
                 },
@@ -105,7 +105,7 @@ describe("State", () => {
                 map(OtherTestAction),
             ),
         )
-        given: testReducer = createReducer(TestState).add(
+        given: testReducer = createReducer(TestState).case(
             (state, action: any) => {
                 return action
             },

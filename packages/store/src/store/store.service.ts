@@ -121,7 +121,7 @@ export class EffectsService implements OnDestroy {
                         const value = options.restartOnError
                             ? caught
                             : throwError(error)
-                        console.error(error)
+                        console.error(error.data ? error.data : error)
                         dispatcher.dispatch(error)
                         return value
                     }),
@@ -161,14 +161,22 @@ export class Reducer<T, U extends Ref<any>> {
     selector: (state: T) => Ref<any>
     provider
 
-    add<V extends [...((...args: any[]) => any)[]]>(
+    case<V extends (...args: any[]) => any>(
+        actions: V,
+        fn: (
+            state: ReturnType<U>,
+            action: ActionType<V>["data"],
+        ) => ReturnType<U> | void,
+    ): this
+    case<V extends [...((...args: any[]) => any)[]]>(
+        actions: V,
         fn: (
             state: ReturnType<U>,
             action: ActionType<V[number]>["data"],
         ) => ReturnType<U> | void,
-        actions: V,
-    ) {
-        this.reducers.push([fn as any, actions])
+    ): this
+    case(actions: any, fn: any) {
+        this.reducers.push([fn, Array.isArray(actions) ? actions : [actions]])
         return this
     }
 

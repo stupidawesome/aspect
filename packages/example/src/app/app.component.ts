@@ -37,14 +37,14 @@ class AppState {
 
 const Increment = createAction("Increment").withData<number>()
 const Multiply = createAction("Multiply").withData<number>()
-const MathError = createAction("MathError").create()
+const MathError = createAction("MathError").withData<any>()
 
 const reducer = createReducer(AppState)
 const setCount = reducer
     .select((data) => data.count)
-    .add((count, increment) => count + increment, [Increment])
-    .add((count, multiplier) => count * multiplier, [Multiply])
-    .add(() => 0, [MathError])
+    .case(Increment, (count, increment) => count + increment)
+    .case(Multiply, (count, multiplier) => count * multiplier)
+    .case(MathError, () => 0)
 
 const appEffects = createEffect(Actions)
     .add((actions) => {
@@ -82,13 +82,13 @@ const Machine = interp(
     state(State.loading, [
         invoke(appEffects),
         transition()
-            .when((state: any) => state.count() >= 10)
+            .when((data: any) => data.count() >= 10)
             .to(State.done),
         transition(Increment)
-            .when((state: any) => state.count() < 10)
+            .when((data: any) => data.count() < 10)
             .action(setCount),
     ]),
-    final(State.done, []),
+    final(State.done),
 )
 
 @Component({

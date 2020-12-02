@@ -109,7 +109,7 @@ export class Interpreter extends BaseInterpreter implements OnDestroy {
             const source: Observable<Action> = effect(deps, this.state).pipe(
                 catchError((error, caught) => {
                     const next = options.restartOnError ? caught : throwError(error)
-                    console.error(error)
+                    console.error(error.data ? error.data : error)
                     this.send(error)
                     return next
                 }),
