@@ -1,50 +1,69 @@
-import { Action, Actions } from '@aspect/store';
-import { Observable, throwError } from 'rxjs';
-import { catchError, filter } from 'rxjs/operators';
-import {BaseInterpreter} from "./base-interpreter";
-import { EXTENDED_STATE, InvokeSchema, Schema, ScxmlEvent, StateSchema, TransitionSchema } from './schema';
-import { Injectable, Injector } from "@angular/core"
+import { Action, Actions } from "@aspect/store"
+import { Observable, Subscription, throwError } from "rxjs"
+import { catchError, filter } from "rxjs/operators"
+import { BaseInterpreter } from "./base-interpreter"
+import { InvokeSchema, Schema, ScxmlEvent, TransitionSchema } from "./schema"
+import { ChangeDetectorRef, Injectable, Injector, OnDestroy } from "@angular/core"
 
 @Injectable()
-export class Interpreter extends BaseInterpreter {
-    callbacks = new Map();
+export class Interpreter extends BaseInterpreter implements OnDestroy {
+    callbacks = new Map()
     state: any
 
-    // @ts-ignore
-    constructor(private injector: Injector, schema: Schema<any>, parent?: BaseInterpreter) {
-        super(schema, parent);
-    }
+    private sink
+    private cdr: ChangeDetectorRef
 
-    onStoreInit(s: any) {
-        this.state = s
-        const initialState = this.schema.find(element => element instanceof StateSchema && element.initial) as StateSchema
-        this.enterStates([new TransitionSchema().to(initialState.id)])
-        void this.mainEventLoop()
+    constructor(
+        private injector: Injector,
+        schema: Schema<any>,
+        state: any,
+        machine: any,
+        actions: Actions,
+        parent?: BaseInterpreter,
+    ) {
+        super(schema, state, parent)
+
+        machine.machine = this
+        this.cdr = this.injector.get(ChangeDetectorRef)
+        this.sink = new Subscription()
+            .add(actions.subscribe(action => this.send(action)))
+
+        this.init()
     }
 
     on(event: string, callback: Function) {
-        (
-            this.callbacks.get(event) || this.callbacks.set(event, []).get(event)
-        ).push(callback);
+        ;(
+            this.callbacks.get(event) ||
+            this.callbacks.set(event, []).get(event)
+        ).push(callback)
     }
 
     executeContent(content: any) {
         if (content instanceof TransitionSchema) {
-            content.actions.forEach(reducer => {
+            content.actions.forEach((reducer) => {
                 reducer.reducers.forEach(([red, action]) => {
-                    if ((<any>action).some((a: any) => a.name === this.event?.name)) {
+                    if (
+                        (<any>action).some(
+                            (a: any) => a.name === this.event?.name,
+                        )
+                    ) {
                         const nextState = reducer.selector(this.state)
                         nextState(red(nextState(), this.event?.data))
                     }
                 })
             })
         }
+        this.cdr.detectChanges()
+    }
+
+    ngOnDestroy() {
+        this.sink.unsubscribe()
     }
 
     cancelInvoke(inv: InvokeSchema) {
-        const instance = this.invokes[inv.id];
+        const instance = this.invokes[inv.id]
         if (instance instanceof BaseInterpreter) {
-            instance.exitInterpreter();
+            instance.exitInterpreter()
         } else {
             instance.ngOnDestroy?.()
             instance.unsubscribe?.()
@@ -52,7 +71,7 @@ export class Interpreter extends BaseInterpreter {
     }
 
     returnDoneEvent(donedata: any) {
-        const callbacks = this.callbacks.get("done");
+        const callbacks = this.callbacks.get("done")
         if (callbacks) {
             callbacks.forEach((callback: Function) => callback(donedata))
         }
@@ -60,20 +79,18 @@ export class Interpreter extends BaseInterpreter {
 
     send(event: ScxmlEvent, target?: string) {
         if (target === "_internal") {
-            this.internalQueue.enqueue(event);
+            this.internalQueue.enqueue(event)
         } else if (target === "_parent" && this.parent) {
-            this.parent.send(event);
+            this.parent.send(event)
         } else if (target) {
-            const invoke: Interpreter = this.invokes[target];
+            const invoke: Interpreter = this.invokes[target]
             invoke.send({
                 name: event.name,
                 data: event.data,
-                origin: this
-            });
+                origin: this,
+            })
         } else {
-            this.externalQueue.enqueue(event);
-            const actions = this.injector.get(Actions)
-            actions.next(event)
+            this.externalQueue.enqueue(event)
         }
     }
 
@@ -82,7 +99,7 @@ export class Interpreter extends BaseInterpreter {
     }
 
     invoke(inv: InvokeSchema) {
-        const { invokes, injector } = this;
+        const { invokes, injector } = this
 
         const effectFactory = inv.src
 
@@ -97,7 +114,7 @@ export class Interpreter extends BaseInterpreter {
                     }
                     return throwError(error)
                 }),
-                filter(event => Object(event).name)
+                filter((event) => Object(event).name),
             )
             invokes[inv.id] = source.subscribe((v) => this.send(v))
         }

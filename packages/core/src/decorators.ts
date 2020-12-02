@@ -1,14 +1,23 @@
-import { SimpleChanges, ɵNG_COMP_DEF, ɵNG_DIR_DEF } from '@angular/core';
+import {
+    ChangeDetectorRef,
+    INJECTOR,
+    SimpleChanges, Type,
+    ɵNG_COMP_DEF,
+    ɵNG_DIR_DEF,
+    ɵɵdirectiveInject as directiveInject,
+} from "@angular/core"
 import { Subject } from 'rxjs';
 import { isArray } from "rxjs/internal-compatibility"
 import {
     createCheckFeature,
     createErrorFeature, createInitFeature,
-    createObserveFeature, wrap
-} from './features/check';
+    createObserveFeature, detectChanges, wrap,
+} from "./features/check"
 import { AspectOptions } from "./interfaces"
 import { Ref } from './ref';
 import { Reflection } from "./reflection"
+import { STORE_INITIALIZER } from "@aspect/store"
+import { tap } from "rxjs/operators"
 
 export function UseFeatures() {
     return function (target: any) {
@@ -17,6 +26,7 @@ export function UseFeatures() {
         const errorHandlerMap = new WeakMap()
         const componentDef = target[ɵNG_COMP_DEF] ?? target[ɵNG_DIR_DEF]
         const origFactory = componentDef.type.ɵfac
+        const injectors = new WeakMap()
 
         for (const propertyKey of Reflection.getOwnMetadataProperties(
             prototype,
@@ -36,6 +46,9 @@ export function UseFeatures() {
                 }
             }
         }
+        target.prototype.ngOnInit = wrap(target.prototype.ngOnInit, function (this: any) {
+            injectors.get(this).get(STORE_INITIALIZER)
+        })
 
         target.prototype.ngOnChanges = wrap(target.prototype.ngOnChanges, function (this: any, changes: SimpleChanges) {
             const changeKeys = Object.keys(changes)
@@ -52,6 +65,7 @@ export function UseFeatures() {
         componentDef.factory = function () {
             const instance = origFactory()
             const errorSubject = new Subject()
+            const changeDetectorRef = directiveInject(ChangeDetectorRef as Type<ChangeDetectorRef>)
             errorHandlerMap.set(instance, errorSubject)
             errorSubject.subscribe({
                 next(err) {
@@ -60,6 +74,10 @@ export function UseFeatures() {
                     }
                 }
             })
+            injectors.set(instance, directiveInject(INJECTOR))
+            instance[detectChanges] = (source: any) => {
+                return source.pipe(tap(() => changeDetectorRef.detectChanges()))
+            }
             return instance
         }
 

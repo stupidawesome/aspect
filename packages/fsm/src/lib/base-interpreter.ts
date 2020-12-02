@@ -32,12 +32,17 @@ export abstract class BaseInterpreter<T extends { [key: string]: any } = any> {
     context = {}
     invokes: { [key: string]: any } = {}
     parent?: BaseInterpreter
-    abstract state: any
     protected event?: ScxmlEvent;
 
-    constructor(protected schema: Schema<T>, parent?: BaseInterpreter) {
+    constructor(protected schema: Schema<T>, protected state: any, parent?: BaseInterpreter) {
         this.parent = parent
         this.running = true
+    }
+
+    init() {
+        const initialState = this.schema.find(element => element instanceof StateSchema && element.initial) as StateSchema
+        this.enterStates([new TransitionSchema().to(initialState.id)])
+        void this.mainEventLoop()
     }
 
     isInFinalState(state: StateSchema): boolean {

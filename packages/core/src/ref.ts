@@ -116,7 +116,7 @@ export const Ref: RefType = class <T> extends Callable<GetterSetter<T>> {
 
     static [Symbol.hasInstance](value: any) {
         const proto = Object.getPrototypeOf(value)
-        return refTypes.some(proto)
+        return refTypes.some(type => type === proto)
     }
 
     get value(): UnwrapRefs<T> {
@@ -211,7 +211,7 @@ export const Ref: RefType = class <T> extends Callable<GetterSetter<T>> {
             return this.ref instanceof Function ? this.ref() : this.ref
         })
         this.ref = valueRef
-        this.subject = new BehaviorSubject<UnwrapRefs<T>>(unref(this))
+        this.subject = new BehaviorSubject<UnwrapRefs<T>>(unref(valueRef))
     }
 } as unknown as RefType
 

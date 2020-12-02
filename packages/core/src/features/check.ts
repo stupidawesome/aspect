@@ -1,7 +1,15 @@
 import { Type } from "@angular/core"
 import * as objectPath from "object-path"
-import { identity, isObservable, Observable, observable, ObservableInput, Subject, Subscribable } from 'rxjs';
-import { catchError, distinctUntilChanged, filter, switchAll, tap } from 'rxjs/operators';
+import {
+    identity,
+    Observable,
+    observable,
+    ObservableInput,
+    OperatorFunction,
+    Subject,
+    Subscribable,
+} from "rxjs"
+import { catchError, distinctUntilChanged, filter } from "rxjs/operators"
 import { AspectOptions } from "../interfaces"
 import { maybeSwitch } from "../utils"
 
@@ -49,6 +57,7 @@ function processOp(options: any, errorMap: any, context: any) {
             filter(isSubscribable),
             options.on ?? identity,
             maybeSwitch(),
+            context[detectChanges],
             catchError((e, caught) => {
                 errorMap.get(context).next(e)
                 return caught
@@ -56,6 +65,8 @@ function processOp(options: any, errorMap: any, context: any) {
         )
     }
 }
+
+export const detectChanges = Symbol()
 
 export function createCheckFeature(props: string[], descriptor: PropertyDescriptor, options: AspectOptions, lifecycleKey: string) {
     return function watchFeature(componentDef: Type<any>, errorMap: WeakMap<any, any>): void {

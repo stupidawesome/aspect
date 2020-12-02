@@ -20,16 +20,18 @@ import {
     throwError,
 } from "rxjs"
 import { catchError, delay, filter, scan } from "rxjs/operators"
+import { Callable } from "../../../core/src/callable"
 
 const REDUCERS = new InjectionToken("REDUCERS")
 const EFFECTS = new InjectionToken("EFFECTS")
-export const STORE_INITIALIZER = new InjectionToken<StoreInitializer[]>(
+export const STORE_INITIALIZER = new InjectionToken(
     "STORE_INITIALIZER",
 )
 
+@Injectable({ providedIn: "root" })
 export class Actions extends Subject<Action> {}
 
-@Injectable()
+@Injectable({ providedIn: "root" })
 export class Dispatcher extends Subject<Action> implements OnDestroy {
     sink
 
@@ -44,16 +46,35 @@ export class Dispatcher extends Subject<Action> implements OnDestroy {
     constructor(actions: Actions) {
         super()
 
-        this.sink = this.pipe(delay(0)).subscribe(actions)
+        this.sink = this.subscribe(actions)
+    }
+}
+
+export interface Dispatch {
+    (action: Action): void
+}
+
+@Injectable({ providedIn: "root" })
+export class Dispatch extends Callable<(action: Action) => void> {
+    constructor(dispatcher: Dispatcher) {
+        super(action => dispatcher.dispatch(action))
     }
 }
 
 @Injectable()
-export class StoreService implements StoreInitializer, OnDestroy {
+export class StoreService implements OnDestroy {
     private sink
 
-    onStoreInit(state: Ref<any>) {
-        const { reducerFactories, dispatcher } = this
+    ngOnDestroy() {
+        this.sink.unsubscribe()
+    }
+
+    constructor(
+        @Inject(REDUCERS) private reducerFactories: Reducer<any, any>[],
+        @Inject(STATE) state: any,
+        dispatcher: Dispatcher,
+    ) {
+        this.sink = new Subscription()
 
         for (const reducerFactory of reducerFactories) {
             for (const [reducer, allowedActions] of reducerFactory.reducers) {
@@ -75,30 +96,24 @@ export class StoreService implements StoreInitializer, OnDestroy {
             }
         }
     }
+}
+
+@Injectable()
+export class EffectsService implements OnDestroy {
+    sink
 
     ngOnDestroy() {
         this.sink.unsubscribe()
     }
 
     constructor(
-        private injector: Injector,
-        @Inject(REDUCERS) private reducerFactories: Reducer<any, any>[],
-        private dispatcher: Dispatcher,
+        @Inject(EFFECTS) effectFactories: EffectFactory<any>[],
+        @Inject(STATE) state: any,
+        dispatcher: Dispatcher,
+        injector: Injector,
     ) {
         this.sink = new Subscription()
-    }
-}
 
-interface StoreInitializer {
-    onStoreInit(state: Ref<any>): void
-}
-
-@Injectable()
-export class EffectsService implements StoreInitializer, OnDestroy {
-    sink
-
-    onStoreInit(state: Ref<any>) {
-        const { effectFactories, dispatcher, injector } = this
         for (const effectFactory of effectFactories) {
             const deps = injector.get(effectFactory.deps)
             const { options } = effectFactory
@@ -115,18 +130,6 @@ export class EffectsService implements StoreInitializer, OnDestroy {
                 this.sink.add(source.subscribe(dispatcher))
             }
         }
-    }
-
-    ngOnDestroy() {
-        this.sink.unsubscribe()
-    }
-
-    constructor(
-        @Inject(EFFECTS) private effectFactories: EffectFactory<any>[],
-        private dispatcher: Dispatcher,
-        private injector: Injector,
-    ) {
-        this.sink = new Subscription()
     }
 }
 
@@ -282,22 +285,16 @@ export function createStore(
     additionalProviders?: any[],
 ) {
     return [
-        {
-            provide: stateProvider,
-            useFactory(initializers?: StoreInitializer[]) {
-                const state = new stateProvider()
-                for (const initializer of initializers ?? []) {
-                    initializer.onStoreInit(state)
-                }
-                return state
-            },
-            deps: [[STORE_INITIALIZER, new Optional(), new Self()]],
-        },
+        stateProvider,
         additionalProviders ?? [],
-        Dispatcher,
-        Actions,
+        {
+            provide: STATE,
+            useExisting: stateProvider
+        }
     ]
 }
+
+export const STATE = new InjectionToken("STATE")
 
 export interface Action {
     readonly name: string

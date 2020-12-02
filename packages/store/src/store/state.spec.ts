@@ -40,7 +40,7 @@ describe("State", () => {
         given: TestState = createState(() => new Ref(0))
         given: testReducer = createReducer(TestState).add(
             (state, action) => {
-                state(action.data)
+               return action
             },
             [TestAction],
         )
@@ -69,7 +69,7 @@ describe("State", () => {
             .select((state) => state().nested)
             .add(
                 (state, action) => {
-                    state(action.data)
+                    return action
                 },
                 [TestAction],
             )
@@ -107,7 +107,7 @@ describe("State", () => {
         )
         given: testReducer = createReducer(TestState).add(
             (state, action: any) => {
-                state(action.data)
+                return action
             },
             [OtherTestAction],
         )

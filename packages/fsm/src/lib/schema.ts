@@ -195,18 +195,37 @@ export interface DocumentOrder {
 
 export const EXTENDED_STATE = new InjectionToken("EXTENDED_STATE")
 
+export class MachineState {
+    private machine!: any
+    private initialState
+    get state(): any[] {
+        return this.machine?.configuration.toList().map((s: any) => s.id) ?? [this.initialState.id]
+    }
+    matches(...stateNames: string[]) {
+        return this.machine?.configuration.toList().every((s: StateSchema) => stateNames.includes(s.id)) ?? stateNames.every(s => this.initialState.id === s)
+    }
+    constructor(sch: Schema<any>) {
+        this.initialState = sch.find(element => element instanceof StateSchema && element.initial) as StateSchema
+    }
+}
+
 export function createFsm(finiteStates: any, dataModel: any): (...children: Schema<any>) => Provider {
     return function(...children: Schema<any>) {
         return [{
             provide: STORE_INITIALIZER,
-            useFactory: (injector: Injector) => {
-                return new Interpreter(injector, schema(...children))
+            useFactory: (injector: Injector, extendedState: any, actions: any, machine: any) => {
+                return new Interpreter(injector, schema(...children), extendedState, machine, actions)
             },
-            deps: [INJECTOR],
+            deps: [INJECTOR, EXTENDED_STATE, Actions, MachineState],
             multi: true
         }, {
             provide: EXTENDED_STATE,
             useExisting: dataModel
+        }, {
+            provide: MachineState,
+            useFactory: () => {
+                return new MachineState(schema(...children))
+            }
         }]
     }
 }
