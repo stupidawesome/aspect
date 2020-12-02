@@ -15,7 +15,7 @@ import {
     createReducer,
     createStore,
     Dispatch,
-    ofType,
+    ofType, rethrowAction,
 } from "@aspect/store"
 import { delay, map, mapTo } from "rxjs/operators"
 import {
@@ -37,26 +37,30 @@ class AppState {
 
 const Increment = createAction("Increment").withData<number>()
 const Multiply = createAction("Multiply").withData<number>()
+const MathError = createAction("MathError").create()
 
 const reducer = createReducer(AppState)
 const setCount = reducer
     .select((data) => data.count)
     .add((count, increment) => count + increment, [Increment])
     .add((count, multiplier) => count * multiplier, [Multiply])
+    .add(() => 0, [MathError])
 
-const appEffects = createEffect(Actions).add((actions) => {
-    return actions.pipe(
-        ofType(Increment),
-        delay(1000),
-        mapTo(Multiply(2)),
-        map((v) => {
-            if (Math.random() > 0.5) {
-                throw new Error("huh")
-            }
-            return v
-        }),
-    )
-}, { restartOnError: true })
+const appEffects = createEffect(Actions)
+    .add((actions) => {
+        return actions.pipe(
+            ofType(Increment),
+            delay(1000),
+            mapTo(Multiply(2)),
+            map((v) => {
+                if (Math.random() > 0.5) {
+                    throw new Error("huh")
+                }
+                return v
+            }),
+            rethrowAction(MathError)
+        )
+    }, { restartOnError: true })
 
 const AppStore = createStore(AppState)
 

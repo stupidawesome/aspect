@@ -108,11 +108,10 @@ export class Interpreter extends BaseInterpreter implements OnDestroy {
         for (const [effect, options] of effectFactory.effects) {
             const source: Observable<Action> = effect(deps, this.state).pipe(
                 catchError((error, caught) => {
-                    if (options.restartOnError) {
-                        console.error(error)
-                        return caught
-                    }
-                    return throwError(error)
+                    const next = options.restartOnError ? caught : throwError(error)
+                    console.error(error)
+                    this.send(error)
+                    return next
                 }),
                 filter((event) => Object(event).name),
             )

@@ -10,6 +10,7 @@ import {
 } from "@angular/core"
 import { Ref } from "@aspect/core"
 import {
+    MonoTypeOperatorFunction,
     Observable,
     OperatorFunction,
     pipe,
@@ -24,9 +25,7 @@ import { Callable } from "../../../core/src/callable"
 
 const REDUCERS = new InjectionToken("REDUCERS")
 const EFFECTS = new InjectionToken("EFFECTS")
-export const STORE_INITIALIZER = new InjectionToken(
-    "STORE_INITIALIZER",
-)
+export const STORE_INITIALIZER = new InjectionToken("STORE_INITIALIZER")
 
 @Injectable({ providedIn: "root" })
 export class Actions extends Subject<Action> {}
@@ -57,7 +56,7 @@ export interface Dispatch {
 @Injectable({ providedIn: "root" })
 export class Dispatch extends Callable<(action: Action) => void> {
     constructor(dispatcher: Dispatcher) {
-        super(action => dispatcher.dispatch(action))
+        super((action) => dispatcher.dispatch(action))
     }
 }
 
@@ -118,12 +117,13 @@ export class EffectsService implements OnDestroy {
             const deps = injector.get(effectFactory.deps)
             for (const [effect, options] of effectFactory.effects) {
                 const source: Observable<Action> = effect(deps, state).pipe(
-                    catchError((error) => {
-                        if (options.restartOnError) {
-                            console.error(error)
-                            return source
-                        }
-                        return throwError(error)
+                    catchError((error, caught) => {
+                        const value = options.restartOnError
+                            ? caught
+                            : throwError(error)
+                        console.error(error)
+                        dispatcher.dispatch(error)
+                        return value
                     }),
                 )
                 this.sink.add(source.subscribe(dispatcher))
@@ -162,7 +162,10 @@ export class Reducer<T, U extends Ref<any>> {
     provider
 
     add<V extends [...((...args: any[]) => any)[]]>(
-        fn: (state: ReturnType<U>, action: ActionType<V[number]>["data"]) => ReturnType<U> | void,
+        fn: (
+            state: ReturnType<U>,
+            action: ActionType<V[number]>["data"],
+        ) => ReturnType<U> | void,
         actions: V,
     ) {
         this.reducers.push([fn as any, actions])
@@ -198,7 +201,10 @@ class EffectFactory<
     deps
     effects
 
-    add(fn: (ctx: InstanceType<T>, state: U) => any, options: EffectOptions = defaultEffectOptions) {
+    add(
+        fn: (ctx: InstanceType<T>, state: U) => any,
+        options: EffectOptions = defaultEffectOptions,
+    ) {
         this.effects.push([fn, options])
         return this
     }
@@ -265,7 +271,7 @@ class ActionBuilder<
         }
         Object.defineProperty(action, "name", {
             value: this.name,
-            enumerable: true
+            enumerable: true,
         })
         return action
     }
@@ -277,6 +283,17 @@ export function createAction<T extends string>(name: T) {
     return new ActionBuilder(name, () => {})
 }
 
+export type ActionFactory<TType = string, TData = any> = (
+    ...args: TData extends (...args: infer R) => infer S ? R : never
+) => {
+    readonly name: TType
+    readonly data: TData extends (...args: any[]) => infer S
+        ? void extends infer S
+            ? undefined
+            : S
+        : undefined
+}
+
 export function createStore(
     stateProvider: State<any>,
     additionalProviders?: any[],
@@ -286,8 +303,8 @@ export function createStore(
         additionalProviders ?? [],
         {
             provide: STATE,
-            useExisting: stateProvider
-        }
+            useExisting: stateProvider,
+        },
     ]
 }
 
@@ -326,4 +343,12 @@ export function withEffects(...effects: EffectFactory<any>[]) {
             multi: true,
         },
     ]
+}
+
+export function rethrowAction<T>(
+    actionType: ActionFactory,
+): MonoTypeOperatorFunction<T> {
+    return function (source) {
+        return source.pipe(catchError((e) => throwError(actionType(e))))
+    }
 }
