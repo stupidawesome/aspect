@@ -4,12 +4,11 @@ import {
     Observable,
     OperatorFunction,
     PartialObserver,
-    Subject,
-    Subscription
-} from 'rxjs';
-import { Callable } from './callable';
-import { GetterSetter, UnwrapRefs } from './interfaces';
-import { collectDeps, flushDeps, pipeFromArray, track } from './utils';
+    Subscription,
+} from "rxjs"
+import { Callable } from "./callable"
+import { GetterSetter, UnwrapRefs } from "./interfaces"
+import { pipeFromArray, track } from "./utils"
 import { Computed } from "./computed"
 import { Signal } from "./signal"
 
@@ -203,12 +202,13 @@ export const Ref: RefType = class <T> extends Callable<GetterSetter<T>> {
 
     constructor(valueRef: T) {
         super((...value: [T]) => {
-            track(this)
             if (value.length > 0) {
                 this.next(value[0])
                 return value[0]
+            } else {
+                track(this)
+                return this.ref instanceof Function ? this.ref() : this.ref
             }
-            return this.ref instanceof Function ? this.ref() : this.ref
         })
         this.ref = valueRef
         this.subject = new BehaviorSubject<UnwrapRefs<T>>(unref(valueRef))

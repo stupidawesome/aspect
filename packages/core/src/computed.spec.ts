@@ -18,7 +18,7 @@ describe("Computed", () => {
         when: subject2(expected2)
 
         then: result = subject()
-        then: result2 = subject2.value
+        then: result2 = subject2()
         then: expect(result).toEqual(expected)
         then: expect(result2).toEqual(expected2)
 

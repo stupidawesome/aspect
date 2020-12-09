@@ -1,18 +1,17 @@
 import {
-    BehaviorSubject, defer,
-    merge, observable,
-    Observable, of,
+    defer,
+    observable,
+    Observable,
+    of,
     OperatorFunction,
     PartialObserver,
-    ReplaySubject,
     Subject,
-    Subscription
-} from 'rxjs';
-import { mergeMapTo, startWith } from 'rxjs/operators';
-import { Callable } from './callable';
-import { UnwrapRefs } from './interfaces';
-import { Ref } from './ref';
-import { collectDeps, flushDeps, pipeFromArray, track } from './utils';
+    Subscription,
+} from "rxjs"
+import { mergeMapTo } from "rxjs/operators"
+import { Callable } from "./callable"
+import { Ref } from "./ref"
+import { collectDeps, flushDeps, pipeFromArray, track } from "./utils"
 
 export interface Computed<T> {
     (): T
@@ -21,6 +20,7 @@ export interface Computed<T> {
 export class Computed<T> extends Callable<any> {
     get value(): T {
         this.computeValue()
+        track(this)
         return this.currentValue
     }
 
@@ -75,13 +75,14 @@ export class Computed<T> extends Callable<any> {
 
     constructor(setter: () => T) {
         super((...value: [T]) => {
-            track(this)
             if (value.length > 0) {
-                this.subject.next(value[0])
+                this.previousValues = Array.from(this.deps).map(ref => ref.value)
                 this.currentValue = value[0]
+                this.subject.next(value[0])
                 return value[0]
+            } else {
+                return this.value
             }
-            return this.value
         })
         this.ref = setter
         this.deps = setter instanceof Ref ? new Set<any>([setter]) : new Set<any>()
