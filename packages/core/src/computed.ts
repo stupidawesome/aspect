@@ -1,14 +1,14 @@
 import {
-    defer,
+    defer, merge,
     observable,
     Observable,
     of,
     OperatorFunction,
-    PartialObserver,
+    PartialObserver, ReplaySubject,
     Subject,
     Subscription,
 } from "rxjs"
-import { mergeMapTo } from "rxjs/operators"
+import { mergeMapTo, share, shareReplay, skip, take } from "rxjs/operators"
 import { Callable } from "./callable"
 import { Ref } from "./ref"
 import { collectDeps, flushDeps, pipeFromArray, track } from "./utils"
@@ -24,6 +24,7 @@ export class Computed<T> extends Callable<any> {
         return this.currentValue
     }
 
+    private destination: Observable<T>
     private ref: (() => T)
     private readonly subject: Subject<T>
     private deps
@@ -70,7 +71,7 @@ export class Computed<T> extends Callable<any> {
     subscribe(observer?: (value: T) => void): Subscription
     subscribe(observer?: PartialObserver<T>): Subscription
     subscribe(observer?: any): Subscription {
-        return this.source.subscribe(observer)
+        return this.destination.subscribe(observer)
     }
 
     constructor(setter: () => T) {
@@ -86,9 +87,19 @@ export class Computed<T> extends Callable<any> {
         })
         this.ref = setter
         this.deps = setter instanceof Ref ? new Set<any>([setter]) : new Set<any>()
-        this.subject = new Subject<T>()
+        this.subject = new ReplaySubject<T>()
         this.source = defer(() => of(this.value)).pipe(
             mergeMapTo(this.subject.asObservable())
         )
+        this.destination = new Observable<T>((observer) => {
+            let innerSubscription: Subscription
+            const next = () => {
+                this.computeValue()
+                const deps = Array.from(this.deps)
+                innerSubscription = merge(...deps).pipe(skip(deps.length), take(1)).subscribe(next)
+            }
+            next()
+            return this.source.subscribe(observer).add(() => innerSubscription.unsubscribe())
+        }).pipe(share())
     }
 }

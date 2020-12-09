@@ -1,5 +1,6 @@
 import { Computed } from './computed';
 import { Ref } from './ref';
+import fn = jest.fn
 
 describe("Computed", () => {
     it("should track parent refs", () => {
@@ -56,5 +57,23 @@ describe("Computed", () => {
 
         then: result = subject3()
         then: expect(result).toBe(20 + 20 * 5 - 10)
+    })
+
+    it("should push computed values", () => {
+        let subject, ref, expected, result
+
+        given: result = fn()
+        given: expected = 10
+        given: ref = new Ref(0)
+        given: subject = new Computed(ref)
+
+        when: subject.subscribe(result)
+        when: ref(expected)
+        when: ref(expected)
+        when: ref(expected)
+
+        then: expect(result).toHaveBeenCalledWith(0)
+        then: expect(result).toHaveBeenCalledWith(10)
+        then: expect(result).toHaveBeenCalledTimes(2)
     })
 })

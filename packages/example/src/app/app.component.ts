@@ -113,9 +113,11 @@ export class AppComponent {
     @DoCheck("count()")
     logCount(previous: number) {
         const { count } = this
-        return Stream.from(count.pipe(delay(1000))).to((value) =>
-            console.log("count:prev", previous, "count:next", value),
-        )
+        const source = count.pipe(delay(1000))
+        const destination = (value: number) =>
+            console.log("count:prev", previous, "count:next", value)
+
+        return Stream.from(source).to(destination)
     }
 
     @Observe(["count"], { on: delay(1000) })
