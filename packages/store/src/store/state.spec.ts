@@ -10,7 +10,7 @@ import {
     createStore,
     Dispatcher,
     ofType,
-    State,
+    State, STORE_INITIALIZER,
     withEffects,
     withReducers,
 } from "./store.service"
@@ -39,16 +39,17 @@ describe("State", () => {
         given: expected = 10
         given: TestState = createState(() => new Ref(0))
         given: testReducer = createReducer(TestState).case(
+            TestAction,
             (state, action) => {
-               return action
+                return action
             },
-            [TestAction],
         )
         given: TestBed.configureTestingModule({
             providers: [createStore(TestState, [withReducers(testReducer)])],
         })
         given: result = TestBed.inject(TestState)
 
+        when: TestBed.inject(STORE_INITIALIZER)
         when: TestBed.inject(Dispatcher).dispatch(TestAction(expected))
 
         then: expect(result()).toBe(expected)
@@ -67,17 +68,15 @@ describe("State", () => {
         )
         given: testReducer = createReducer(TestState)
             .select((state) => state().nested)
-            .case(
-                (state, action) => {
-                    return action
-                },
-                [TestAction],
-            )
+            .case(TestAction, (state, action) => {
+                return action
+            })
         given: TestBed.configureTestingModule({
             providers: [createStore(TestState, [withReducers(testReducer)])],
         })
         given: result = TestBed.inject(TestState)
 
+        when: TestBed.inject(STORE_INITIALIZER)
         when: TestBed.inject(Dispatcher).dispatch(TestAction(expected))
 
         then: expect(result().nested()).toBe(expected)
@@ -98,18 +97,18 @@ describe("State", () => {
         )
         given: expected = 10
         given: TestState = createState(() => new Ref(0))
-        given: testEffects = createEffect(Actions, TestState).add((actions) =>
-            actions.pipe(
+        given: testEffects = createEffect(Actions, TestState).add((actions) => {
+            return actions.pipe(
                 ofType(TestAction),
                 map((action) => action.data),
                 map(OtherTestAction),
-            ),
-        )
+            )
+        })
         given: testReducer = createReducer(TestState).case(
+            OtherTestAction,
             (state, action: any) => {
                 return action
             },
-            [OtherTestAction],
         )
         given: TestBed.configureTestingModule({
             providers: [
@@ -121,6 +120,7 @@ describe("State", () => {
         })
         given: result = TestBed.inject(TestState)
 
+        when: TestBed.inject(STORE_INITIALIZER)
         when: TestBed.inject(Dispatcher).dispatch(TestAction(0))
         when: tick()
 

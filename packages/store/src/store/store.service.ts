@@ -4,8 +4,6 @@ import {
     InjectionToken,
     Injector,
     OnDestroy,
-    Optional,
-    Self,
     Type,
 } from "@angular/core"
 import { Ref } from "@aspect/core"
@@ -20,11 +18,13 @@ import {
     Subscription,
     throwError,
 } from "rxjs"
-import { catchError, delay, filter, scan } from "rxjs/operators"
+import { catchError, filter, scan } from "rxjs/operators"
 import { Callable } from "../../../core/src/callable"
 
 const REDUCERS = new InjectionToken("REDUCERS")
 const EFFECTS = new InjectionToken("EFFECTS")
+
+export const STATE = new InjectionToken("STATE")
 export const STORE_INITIALIZER = new InjectionToken("STORE_INITIALIZER")
 
 @Injectable({ providedIn: "root" })
@@ -316,8 +316,6 @@ export function createStore(
     ]
 }
 
-export const STATE = new InjectionToken("STATE")
-
 export interface Action {
     readonly name: string
     readonly data: unknown
@@ -332,7 +330,7 @@ export function withReducers(...reducers: Reducer<any, any>[]) {
         },
         {
             provide: STORE_INITIALIZER,
-            useClass: StoreService,
+            useExisting: StoreService,
             multi: true,
         },
     ]
